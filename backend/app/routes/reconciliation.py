@@ -1,59 +1,44 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models.transactions import BankTransaction, ERPTransaction, ReconciliationResult
+from app.schemas import ReconciliationResponse
 from datetime import datetime
-from app import storage
 
 router = APIRouter()
 
-def parse_date(date_str: str):
-    """Try to parse date from string into datetime.date"""
-    try:
-        return datetime.strptime(date_str, "%Y-%m-%d").date()
-    except Exception:
-        return None
-
-@router.post("/reconcile")
-def reconcile():
-    bank = storage.bank_data
-    erp = storage.erp_data
-
-    if not bank or not erp:
-        return {"error": "No uploaded data found"}
+@router.post("/reconcile", response_model=ReconciliationResponse)
+def reconcile(db: Session = Depends(get_db)):
+    bank = db.query(BankTransaction).all()
+    erp = db.query(ERPTransaction).all()
 
     matches = []
-    unmatched_bank = bank.copy()
-    unmatched_erp = erp.copy()
+    unmatched_bank = [b.__dict__ for b in bank]
+    unmatched_erp = [e.__dict__ for e in erp]
 
-    # Tolerant reconciliation logic
     for b in bank:
-        b_date = parse_date(b.get("date"))
-        b_amount = float(b.get("amount", 0))
-
         for e in erp:
-            e_date = parse_date(e.get("date"))
-            e_amount = float(e.get("amount", 0))
-
-            if not b_date or not e_date:
-                continue
-
-            amount_match = abs(abs(b_amount) - abs(e_amount)) < 1.0
-            date_match = abs((b_date - e_date).days) <= 1
-
-            if amount_match and date_match:
-                matches.append({"bank": b, "erp": e})
-                if b in unmatched_bank:
-                    unmatched_bank.remove(b)
-                if e in unmatched_erp:
-                    unmatched_erp.remove(e)
+            if b.amount == e.amount and b.date == e.date:
+                matches.append({"bank": b.__dict__, "erp": e.__dict__})
+                if b.__dict__ in unmatched_bank:
+                    unmatched_bank.remove(b.__dict__)
+                if e.__dict__ in unmatched_erp:
+                    unmatched_erp.remove(e.__dict__)
                 break
 
-    return {
+    results = {
         "matches": matches,
         "unmatched_bank": unmatched_bank,
         "unmatched_erp": unmatched_erp,
     }
-@router.get("/debug-storage")
-def debug_storage():
-    return {
-        "bank_data": storage.bank_data,
-        "erp_data": storage.erp_data,
-    }
+
+    rec = ReconciliationResult(results=results)
+    db.add(rec)
+    db.commit()
+
+    return results
+
+
+@router.get("/reconciliation-history")
+def history(db: Session = Depends(get_db)):
+    return db.query(ReconciliationResult).all()
