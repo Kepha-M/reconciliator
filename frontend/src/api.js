@@ -35,3 +35,29 @@ export async function getErpTransactions() {
   }
   return response.json();
 }
+
+// Run reconciliation
+export async function reconcileTransactions() {
+  const response = await fetch(`${API_BASE_URL}/reconcile`);
+  if (!response.ok) {
+    throw new Error("Failed to reconcile transactions");
+  }
+  return response.json();
+}
+// ReconciliationHistory
+export const getReconciliationHistory = async () => {
+  const res = await fetch("http://localhost:8000/reconciliation-history");
+  return res.json();
+};
+// 🔹 Run reconciliation
+export async function runReconciliation() {
+  const response = await fetch(`${API_BASE_URL}/reconcile`, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error("Reconciliation failed");
+  }
+
+  return response.json();
+}

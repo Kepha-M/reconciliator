@@ -2,7 +2,8 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import io
-
+from app import storage
+from app.routes import reconciliation
 app = FastAPI()
 
 # In-memory storage
@@ -17,6 +18,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Register reconciliation routes
+app.include_router(reconciliation.router, prefix="/api", tags=["reconciliation"])
 @app.post("/upload-files")
 async def upload_files(
     bank_file: UploadFile = File(...),
@@ -48,8 +51,8 @@ async def upload_files(
 
         return {
             "message": "Files uploaded successfully",
-            "bank_rows": len(bank_data),
-            "erp_rows": len(erp_data),
+            "bank_rows": len(storage.bank_data),
+            "erp_rows": len(storage.erp_data),
         }
 
     except Exception as e:
@@ -64,3 +67,45 @@ async def get_bank_transactions():
 @app.get("/erp-transactions")
 async def get_erp_transactions():
     return {"transactions": erp_data}
+
+@app.post("/reconcile")
+async def reconcile():
+    """Compare Bank vs ERP transactions and return matched/unmatched results."""
+    try:
+        bank_df = pd.DataFrame(storage.bank_data)
+        erp_df = pd.DataFrame(storage.erp_data)
+
+        if bank_df.empty or erp_df.empty:
+            return {"error": "Both files must be uploaded before reconciliation."}
+
+        # Perform reconciliation on TransactionID + Amount
+        merged = pd.merge(
+            bank_df, erp_df,
+            on=["TransactionID", "Debit", "Credit"],
+            how="outer",
+            indicator=True,
+            suffixes=("_Bank", "_ERP")
+        )
+
+        matched = merged[merged["_merge"] == "both"].to_dict(orient="records")
+        bank_only = merged[merged["_merge"] == "left_only"].to_dict(orient="records")
+        erp_only = merged[merged["_merge"] == "right_only"].to_dict(orient="records")
+
+        return {
+            "matched": matched,
+            "bank_only": bank_only,
+            "erp_only": erp_only
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+    
+    # Debug route: check what’s in memory
+@app.get("/debug-storage")
+def debug_storage():
+    return {
+        "bank_data_count": len(storage.bank_data),
+        "erp_data_count": len(storage.erp_data),
+        "sample_bank": storage.bank_data[:5],
+        "sample_erp": storage.erp_data[:5],
+    }
