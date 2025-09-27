@@ -6,8 +6,8 @@ import toast from "react-hot-toast";
 export default function Transactions() {
   const [bankFile, setBankFile] = useState(null);
   const [erpFile, setErpFile] = useState(null);
-  const [bankTransactions, setBankTransactions] = useState([]);
-  const [erpTransactions, setErpTransactions] = useState([]);
+  const [bankTransactions] = useState([]);
+  const [erpTransactions] = useState([]);
   const [uploading, setUploading] = useState(false);
 
   const handleUpload = async () => {
@@ -26,8 +26,6 @@ export default function Transactions() {
       // ✅ Refresh tables after upload
       const bankData = await getBankTransactions();
       const erpData = await getErpTransactions();
-      setBankTransactions(bankData.transactions);
-      setErpTransactions(erpData.transactions);
     } catch (error) {
       console.error(error);
       toast.error("Upload failed!");
@@ -42,8 +40,6 @@ export default function Transactions() {
       try {
         const bankData = await getBankTransactions();
         const erpData = await getErpTransactions();
-        setBankTransactions(bankData.transactions);
-        setErpTransactions(erpData.transactions);
       } catch (err) {
         console.error(err);
       }
@@ -57,13 +53,13 @@ export default function Transactions() {
 
         {/* File Upload */}
         <div className="flex flex-col gap-4 my-4">
-          <input
+          Bank Transactions:<input
             type="file"
             accept=".csv,.xlsx"
             onChange={(e) => setBankFile(e.target.files[0])}
             className="border rounded-lg px-3 py-2"
           />
-          <input
+          ERP Transactions:<input
             type="file"
             accept=".csv,.xlsx"
             onChange={(e) => setErpFile(e.target.files[0])}
@@ -105,13 +101,13 @@ export default function Transactions() {
                   </tr>
                 ) : (
                   bankTransactions.map((t, idx) => (
-                    <tr key={idx} className="border-b">
-                      <td className="px-4 py-2">{t.Date}</td>
-                      <td className="px-4 py-2">{t.TransactionID}</td>
-                      <td className="px-4 py-2">{t.Description}</td>
-                      <td className="px-4 py-2">{t.Amount}</td>
-                      <td className="px-4 py-2">{t.Balance}</td>
-                    </tr>
+                     <tr key={idx} className="border-b">
+                        <td className="px-4 py-2">{t.date}</td>
+                        <td className="px-4 py-2">{t.transaction_id}</td>
+                        <td className="px-4 py-2">{t.description}</td>
+                        <td className="px-4 py-2">{t.amount}</td>
+                        <td className="px-4 py-2">{t.debit ?? t.credit ?? ""}</td> {/* Optional balance column */}
+                      </tr>
                   ))
                 )}
               </tbody>

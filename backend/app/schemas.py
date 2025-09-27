@@ -2,7 +2,6 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import date
 
-
 class TransactionBase(BaseModel):
     transaction_id: Optional[str]
     date: Optional[date]
@@ -11,19 +10,17 @@ class TransactionBase(BaseModel):
     credit: Optional[float]
     amount: Optional[float]
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True,  # required for from_orm in Pydantic v2
+    }
 
+# Nested match schema for reconciliation
+class TransactionMatch(BaseModel):
+    bank: TransactionBase
+    erp: TransactionBase
 
-class BankTransactionCreate(TransactionBase):
-    pass
-
-
-class ERPTransactionCreate(TransactionBase):
-    pass
-
-
+# Response model for reconciliation results
 class ReconciliationResponse(BaseModel):
-    matches: list
-    unmatched_bank: list
-    unmatched_erp: list
+    matches: List[TransactionMatch]
+    unmatched_bank: List[TransactionBase]
+    unmatched_erp: List[TransactionBase]
