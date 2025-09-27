@@ -21,11 +21,10 @@ export async function uploadFiles(bankFile, erpFile) {
 // Fetch bank transactions
 export async function getBankTransactions() {
   const response = await fetch(`${API_BASE_URL}/transactions-bank`, {
-  method: "POST",
+  method: "GET",
   headers: {
     "Content-Type": "application/json",
-  },
-  body: JSON.stringify({ /* payload if any */ })
+  }
 });
   if (!response.ok) {
     throw new Error("Failed to fetch bank transactions");
@@ -42,15 +41,6 @@ export async function getErpTransactions() {
   return response.json();
 }
 
-// // Run reconciliation
-// export async function reconcileTransactions() {
-//   const response = await fetch(`${API_BASE_URL}/reconciliation`);
-//   if (!response.ok) {
-//     throw new Error("Failed to reconcile transactions");
-//   }
-//   return response.json();
-// }
-// ReconciliationHistory
 export const getReconciliationHistory = async () => {
   const res = await fetch(`${API_BASE_URL}/reconciliation-history`);
   return res.json();
