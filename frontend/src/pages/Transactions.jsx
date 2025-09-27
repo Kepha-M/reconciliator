@@ -73,7 +73,7 @@ export default function Transactions() {
           <table className="w-full border-collapse">
             <thead className="bg-brand-light text-white">
               <tr>
-                {["Date", "Account", "Amount", "Reference", "Status"].map(
+                {["Date", "Transaction ID", "Description", "Debit", "Credit","Balance"].map(
                   (col, idx) => (
                     <th key={idx} className="px-4 py-2 text-left">
                       {col}
@@ -92,11 +92,12 @@ export default function Transactions() {
               ) : (
                 transactions.map((t, idx) => (
                   <tr key={idx} className="border-b">
+                    <td className="px-4 py-2">{t.TransactionID}</td>
                     <td className="px-4 py-2">{t.Date}</td>
-                    <td className="px-4 py-2">{t.Account}</td>
-                    <td className="px-4 py-2">{t.Amount}</td>
-                    <td className="px-4 py-2">{t.Reference}</td>
-                    <td className="px-4 py-2">{t.Status}</td>
+                    <td className="px-4 py-2">{t.Description}</td>
+                    <td className="px-4 py-2">{t.Debit}</td>
+                    <td className="px-4 py-2">{t.Credit}</td>
+                    <td className="px-4 py-2">{t.Balance}</td>
                   </tr>
                 ))
               )}

@@ -52,15 +52,4 @@ async def upload_transactions(file: UploadFile = File(...)):
 @app.get("/transactions")
 async def get_transactions():
     return {"transactions": transactions_db}
-# @app.get("/")
-# def root():
-#     return {"message": "Backend running 🚀"}
 
-# @app.post("/upload-transactions")
-# async def upload_transactions(file: UploadFile = File(...)):
-#     upload_dir = "uploads"
-#     os.makedirs(upload_dir, exist_ok=True)
-#     file_path = os.path.join(upload_dir, file.filename)
-#     with open(file_path, "wb") as buffer:
-#         shutil.copyfileobj(file.file, buffer)
-#     return {"filename": file.filename, "status": "uploaded successfully"}
