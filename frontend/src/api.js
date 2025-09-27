@@ -1,10 +1,12 @@
-const API_BASE_URL = "http://127.0.0.1:8000"; // FastAPI backend
+const API_BASE_URL = "http://127.0.0.1:8000";
 
-export async function uploadTransactionFile(file) {
+// Upload both Bank + ERP files
+export async function uploadFiles(bankFile, erpFile) {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("bank_file", bankFile);
+  formData.append("erp_file", erpFile);
 
-  const response = await fetch(`${API_BASE_URL}/upload-transactions`, {
+  const response = await fetch(`${API_BASE_URL}/upload-files`, {
     method: "POST",
     body: formData,
   });
@@ -13,13 +15,23 @@ export async function uploadTransactionFile(file) {
     throw new Error(`Upload failed: ${response.statusText}`);
   }
 
-  return await response.json(); // ✅ ensure parsed JSON
+  return response.json();
 }
 
-export async function getTransactions() {
-  const response = await fetch(`${API_BASE_URL}/transactions`);
+// Fetch bank transactions
+export async function getBankTransactions() {
+  const response = await fetch(`${API_BASE_URL}/bank-transactions`);
   if (!response.ok) {
-    throw new Error("Failed to fetch transactions");
+    throw new Error("Failed to fetch bank transactions");
   }
-  return await response.json(); // ✅ ensure parsed JSON
+  return response.json();
+}
+
+// Fetch ERP transactions
+export async function getErpTransactions() {
+  const response = await fetch(`${API_BASE_URL}/erp-transactions`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch ERP transactions");
+  }
+  return response.json();
 }

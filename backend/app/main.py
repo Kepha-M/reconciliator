@@ -1,13 +1,14 @@
-transactions_db = []
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-import shutil
-import pandas as pd 
+import pandas as pd
 import io
 
 app = FastAPI()
 
-# Allow CORS for frontend
+# In-memory storage
+bank_data = []
+erp_data = []
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,40 +17,50 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.post("/upload-transactions")
-async def upload_transactions(file: UploadFile = File(...)):
+@app.post("/upload-files")
+async def upload_files(
+    bank_file: UploadFile = File(...),
+    erp_file: UploadFile = File(...)
+):
     try:
-        # Read file into pandas
-        contents = await file.read()
-        if file.filename.endswith(".csv"):
-            df = pd.read_csv(io.BytesIO(contents))
-        elif file.filename.endswith(".xlsx"):
-            df = pd.read_excel(io.BytesIO(contents))
+        # --- Parse bank file ---
+        bank_contents = await bank_file.read()
+        if bank_file.filename.endswith(".csv"):
+            bank_df = pd.read_csv(io.BytesIO(bank_contents))
+        elif bank_file.filename.endswith(".xlsx"):
+            bank_df = pd.read_excel(io.BytesIO(bank_contents))
         else:
-            return {"error": "Unsupported file type"}
+            return {"error": "Unsupported bank file type"}
 
-        # Normalize columns (example)
-        df = df.rename(
-            columns={
-                "date": "Date",
-                "account": "Account",
-                "amount": "Amount",
-                "reference": "Reference",
-                "status": "Status",
-            }
-        )
+        # --- Parse ERP file ---
+        erp_contents = await erp_file.read()
+        if erp_file.filename.endswith(".csv"):
+            erp_df = pd.read_csv(io.BytesIO(erp_contents))
+        elif erp_file.filename.endswith(".xlsx"):
+            erp_df = pd.read_excel(io.BytesIO(erp_contents))
+        else:
+            return {"error": "Unsupported ERP file type"}
 
-        # Store in memory
-        global transactions_db
-        transactions_db = df.to_dict(orient="records")
+        # Save globally
+        global bank_data, erp_data
+        bank_data = bank_df.to_dict(orient="records")
+        erp_data = erp_df.to_dict(orient="records")
 
-        return {"message": "File uploaded successfully", "rows": len(transactions_db)}
+        return {
+            "message": "Files uploaded successfully",
+            "bank_rows": len(bank_data),
+            "erp_rows": len(erp_data),
+        }
 
     except Exception as e:
         return {"error": str(e)}
 
 
-@app.get("/transactions")
-async def get_transactions():
-    return {"transactions": transactions_db}
+@app.get("/bank-transactions")
+async def get_bank_transactions():
+    return {"transactions": bank_data}
 
+
+@app.get("/erp-transactions")
+async def get_erp_transactions():
+    return {"transactions": erp_data}
