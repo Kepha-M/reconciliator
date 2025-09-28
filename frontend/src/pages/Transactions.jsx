@@ -1,7 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import DashboardLayout from "../layouts/DashboardLayout";
-import { uploadFiles, getBankTransactions, getErpTransactions, runReconciliation, getReconciliationHistory } from "../api";
+import { uploadFiles, runReconciliation } from "../api";
 import toast from "react-hot-toast";
+
+// Import icons
+import {
+  Upload,
+  Play,
+  Banknote,
+  FileSpreadsheet,
+  Table as TableIcon,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 
 export default function Transactions() {
   const [bankFile, setBankFile] = useState(null);
@@ -11,24 +22,9 @@ export default function Transactions() {
   const [uploading, setUploading] = useState(false);
   const [reconRunning, setReconRunning] = useState(false);
 
-  // Reconciliation results
   const [matched, setMatched] = useState([]);
   const [unmatchedBank, setUnmatchedBank] = useState([]);
   const [unmatchedERP, setUnmatchedERP] = useState([]);
-
-  // Fetch existing transactions on load
-  useEffect(() => {
-    (async () => {
-      try {
-        const bankData = await getBankTransactions();
-        const erpData = await getErpTransactions();
-        setBankTransactions(bankData);
-        setErpTransactions(erpData);
-      } catch (err) {
-        console.error("Error fetching transactions:", err);
-      }
-    })();
-  }, []);
 
   // -------------------- Upload files --------------------
   const handleUpload = async () => {
@@ -40,9 +36,10 @@ export default function Transactions() {
     try {
       setUploading(true);
       const res = await uploadFiles(bankFile, erpFile);
-      toast.success(`Uploaded successfully (Bank: ${res.bank_rows} rows, ERP: ${res.erp_rows} rows)`);
+      toast.success(
+        `Uploaded successfully (Bank: ${res.bank_rows} rows, ERP: ${res.erp_rows} rows)`
+      );
 
-      // Update tables after upload
       setBankTransactions(res.bank_data || []);
       setErpTransactions(res.erp_data || []);
     } catch (error) {
@@ -74,12 +71,9 @@ export default function Transactions() {
       const res = await runReconciliation(bankTransactions, erpTransactions);
       toast.success("Reconciliation completed!");
 
-      // Update results tables
       setMatched(res.matched || []);
       setUnmatchedBank(res.unmatched_bank || []);
       setUnmatchedERP(res.unmatched_erp || []);
-
-      console.log("Reconciliation results:", res);
     } catch (err) {
       console.error("Reconciliation failed:", err);
       toast.error("Reconciliation failed!");
@@ -90,127 +84,208 @@ export default function Transactions() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <h1 className="text-2xl font-bold text-brand">Upload Files</h1>
+      <div className="p-6 space-y-8">
+        {/* Header */}
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-800 flex items-center justify-center gap-2">
+            <TableIcon className="w-8 h-8 text-blue-600" />
+            Transactions Management
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Upload, view, and reconcile your transactions
+          </p>
+        </div>
 
-        {/* File Upload */}
-        <div className="flex flex-col gap-4 my-4">
-          Bank Transactions:
-          <input
-            type="file"
-            accept=".csv,.xlsx"
-            onChange={(e) => setBankFile(e.target.files[0])}
-            className="border rounded-lg px-3 py-2"
-          />
-          ERP Transactions:
-          <input
-            type="file"
-            accept=".csv,.xlsx"
-            onChange={(e) => setErpFile(e.target.files[0])}
-            className="border rounded-lg px-3 py-2"
-          />
+        {/* Upload Section */}
+        <div className="bg-white p-6 rounded-xl shadow space-y-4">
+          <h2 className="text-xl font-semibold text-gray-700 flex items-center gap-2">
+            <Upload className="w-5 h-5 text-blue-600" />
+            Upload Files
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-gray-600 font-medium mb-2">
+                <Banknote className="inline w-4 h-4 mr-1 text-green-600" />
+                Bank Transactions:
+              </label>
+              <input
+                type="file"
+                accept=".csv,.xlsx"
+                onChange={(e) => setBankFile(e.target.files[0])}
+                className="w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-200"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-600 font-medium mb-2">
+                <FileSpreadsheet className="inline w-4 h-4 mr-1 text-indigo-600" />
+                ERP Transactions:
+              </label>
+              <input
+                type="file"
+                accept=".csv,.xlsx"
+                onChange={(e) => setErpFile(e.target.files[0])}
+                className="w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-200"
+              />
+            </div>
+          </div>
           <button
             onClick={handleUpload}
             disabled={uploading}
-            className={`px-4 py-2 rounded-lg text-white ${uploading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
+            className={`w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-white font-medium ${
+              uploading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
           >
-            {uploading ? "Uploading..." : "Upload Both (Bank + ERP) Files"}
+            <Upload className="w-5 h-5" />
+            {uploading ? "Uploading..." : "Upload Both Files"}
           </button>
         </div>
 
-        {/* Run Reconciliation Button */}
-        <div className="my-4">
-          <button
-            onClick={handleRunReconciliation}
-            disabled={reconRunning}
-            className={`px-4 py-2 rounded-lg text-white ${reconRunning ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"}`}
-          >
-            {reconRunning ? "Running..." : "Run Reconciliation"}
-          </button>
-        </div>
+        {/* Run Reconciliation */}
+        {(bankTransactions.length > 0 || erpTransactions.length > 0) && (
+          <div className="bg-white p-6 rounded-xl shadow text-center">
+            <button
+              onClick={handleRunReconciliation}
+              disabled={reconRunning}
+              className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-white font-semibold ${
+                reconRunning
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-green-600 hover:bg-green-700"
+              }`}
+            >
+              <Play className="w-5 h-5" />
+              {reconRunning ? "Running..." : "Run Reconciliation"}
+            </button>
+          </div>
+        )}
 
-        {/* Transactions Tables */}
-        <TransactionTable
-          title="Bank Transactions"
-          columns={["Date", "TransactionID", "Description", "Amount", "Balance"]}
-          data={bankTransactions}
-          type="bank"
-          onDelete={handleDeleteTransaction}
-        />
+        {/* Accordion Tables */}
+        {bankTransactions.length > 0 && (
+          <AccordionTable
+            title="Bank Transactions"
+            icon={<Banknote className="w-5 h-5 text-green-600" />}
+            columns={["Date", "TransactionID", "Description", "Amount", "Balance"]}
+            data={bankTransactions}
+            type="bank"
+            onDelete={handleDeleteTransaction}
+          />
+        )}
 
-        <TransactionTable
-          title="ERP Transactions"
-          columns={["Date", "VoucherNo", "Account", "Amount", "Reference"]}
-          data={erpTransactions}
-          type="erp"
-          onDelete={handleDeleteTransaction}
-        />
+        {erpTransactions.length > 0 && (
+          <AccordionTable
+            title="ERP Transactions"
+            icon={<FileSpreadsheet className="w-5 h-5 text-indigo-600" />}
+            columns={["Date", "VoucherNo", "Account", "Amount", "Reference"]}
+            data={erpTransactions}
+            type="erp"
+            onDelete={handleDeleteTransaction}
+          />
+        )}
 
-        {/* Reconciliation Results Tables */}
-        <TransactionTable
-          title="Matched Transactions"
-          columns={["bank_reference", "erp_reference", "Date", "Amount"]}
-          data={matched}
-          type="matched"
-        />
-        <TransactionTable
-          title="Unmatched Bank Transactions"
-          columns={["bank_reference", "Date", "Amount"]}
-          data={unmatchedBank}
-          type="unmatched_bank"
-        />
-        <TransactionTable
-          title="Unmatched ERP Transactions"
-          columns={["erp_reference", "Date", "Amount"]}
-          data={unmatchedERP}
-          type="unmatched_erp"
-        />
+        {(matched.length > 0 || unmatchedBank.length > 0 || unmatchedERP.length > 0) && (
+          <div className="space-y-6">
+            {matched.length > 0 && (
+              <AccordionTable
+                title="Matched Transactions"
+                icon={<TableIcon className="w-5 h-5 text-blue-600" />}
+                columns={["bank_reference", "erp_reference", "Date", "Amount"]}
+                data={matched}
+                type="matched"
+              />
+            )}
+            {unmatchedBank.length > 0 && (
+              <AccordionTable
+                title="Unmatched Bank Transactions"
+                icon={<Banknote className="w-5 h-5 text-red-600" />}
+                columns={["bank_reference", "Date", "Amount"]}
+                data={unmatchedBank}
+                type="unmatched_bank"
+              />
+            )}
+            {unmatchedERP.length > 0 && (
+              <AccordionTable
+                title="Unmatched ERP Transactions"
+                icon={<FileSpreadsheet className="w-5 h-5 text-orange-600" />}
+                columns={["erp_reference", "Date", "Amount"]}
+                data={unmatchedERP}
+                type="unmatched_erp"
+              />
+            )}
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
 }
 
-// -------------------- Reusable Transaction Table Component --------------------
-function TransactionTable({ title, columns, data, type, onDelete }) {
+// -------------------- Accordion + Table --------------------
+function AccordionTable({ title, icon, columns, data, type, onDelete }) {
+  const [open, setOpen] = useState(true);
+
   return (
-    <div className="mt-8">
-      <h2 className="text-xl font-semibold mb-2">{title}</h2>
-      <div className="overflow-x-auto bg-white shadow rounded-xl">
-        <table className="w-full border-collapse">
-          <thead className="bg-brand-light text-white">
-            <tr>
-              {columns.map((col) => (
-                <th key={col} className="px-4 py-2 text-left">{col}</th>
-              ))}
-              {onDelete && <th className="px-4 py-2 text-left">Actions</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {data.length === 0 ? (
+    <div className="bg-white rounded-xl shadow">
+      {/* Accordion Header */}
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex justify-between items-center px-6 py-4 text-left border-b"
+      >
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          {icon}
+          {title} <span className="text-gray-500 text-sm">({data.length})</span>
+        </h2>
+        {open ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
+      </button>
+
+      {/* Accordion Content */}
+      {open && (
+        <div className="overflow-x-auto p-4">
+          <table className="w-full border-collapse text-sm">
+            <thead className="bg-blue-600 text-white">
               <tr>
-                <td colSpan={columns.length + (onDelete ? 1 : 0)} className="text-center py-4 text-gray-500">
-                  No transactions available
-                </td>
+                {columns.map((col) => (
+                  <th key={col} className="px-4 py-2 text-left font-medium uppercase tracking-wide">
+                    {col}
+                  </th>
+                ))}
+                {onDelete && <th className="px-4 py-2">Actions</th>}
               </tr>
-            ) : (
-              data.map((t, idx) => (
-                <tr key={idx} className="border-b">
-                  {columns.map((col) => (
-                    <td key={col} className="px-4 py-2">{t[col] ?? t[col.toLowerCase()] ?? ""}</td>
-                  ))}
-                  {onDelete && (
-                    <td className="px-4 py-2">
-                      <button onClick={() => onDelete(type, idx)} className="text-red-600 hover:underline">
-                        Delete
-                      </button>
-                    </td>
-                  )}
+            </thead>
+            <tbody>
+              {data.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={columns.length + (onDelete ? 1 : 0)}
+                    className="text-center py-4 text-gray-500"
+                  >
+                    No transactions available
+                  </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : (
+                data.map((t, idx) => (
+                  <tr key={idx} className="border-b hover:bg-gray-50 transition-colors">
+                    {columns.map((col) => (
+                      <td key={col} className="px-4 py-2">
+                        {t[col] ?? t[col.toLowerCase()] ?? ""}
+                      </td>
+                    ))}
+                    {onDelete && (
+                      <td className="px-4 py-2">
+                        <button
+                          onClick={() => onDelete(type, idx)}
+                          className="text-red-600 hover:underline text-sm"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
