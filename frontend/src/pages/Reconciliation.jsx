@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "../layouts/DashboardLayout";
-import { runReconciliation } from "../api";
+import { runReconciliation, getReconciliationHistory } from "../api"; // new API method
 import toast from "react-hot-toast";
 
 export default function Reconciliation() {
@@ -10,6 +10,25 @@ export default function Reconciliation() {
     unmatched_erp: [],
   });
   const [loading, setLoading] = useState(false);
+
+  // Fetch past results from DB on mount
+  useEffect(() => {
+    const fetchResults = async () => {
+      try {
+        const res = await getReconciliationHistory();
+        console.log(res);
+        setResults({
+          matches: res.matches || [],
+          unmatched_bank: res.unmatched_bank || [],
+          unmatched_erp: res.unmatched_erp || [],
+        });
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to load reconciliation results");
+      }
+    };
+    fetchResults();
+  }, []);
 
   const handleReconcile = async () => {
     try {
@@ -33,50 +52,47 @@ export default function Reconciliation() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <h1 className="text-2xl font-bold text-brand">Reconciliation</h1>
+      <div className="p-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-brand">Reconciliation</h1>
+          <button
+            onClick={handleReconcile}
+            disabled={loading}
+            className={`px-4 py-2 rounded-lg text-white transition ${
+              loading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-green-600 hover:bg-green-700"
+            }`}
+          >
+            {loading ? "Reconciling..." : "Run Reconciliation"}
+          </button>
+        </div>
 
-        {/* Run Button */}
-        <button
-          onClick={handleReconcile}
-          disabled={loading}
-          className={`mt-4 px-4 py-2 rounded-lg text-white ${
-            loading ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"
-          }`}
-        >
-          {loading ? "Reconciling..." : "Run Reconciliation"}
-        </button>
-
-        {/* Summary */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white shadow rounded-xl p-4 text-center">
-            <h3 className="text-lg font-semibold">Matches</h3>
-            <p className="text-2xl font-bold text-green-600">
-              {results.matches.length}
-            </p>
-          </div>
-          <div className="bg-white shadow rounded-xl p-4 text-center">
-            <h3 className="text-lg font-semibold">Unmatched Bank</h3>
-            <p className="text-2xl font-bold text-red-600">
-              {results.unmatched_bank.length}
-            </p>
-          </div>
-          <div className="bg-white shadow rounded-xl p-4 text-center">
-            <h3 className="text-lg font-semibold">Unmatched ERP</h3>
-            <p className="text-2xl font-bold text-red-600">
-              {results.unmatched_erp.length}
-            </p>
-          </div>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <SummaryCard
+            title="Matches"
+            count={results.matches.length}
+            color="text-green-600"
+          />
+          <SummaryCard
+            title="Unmatched Bank"
+            count={results.unmatched_bank.length}
+            color="text-red-600"
+          />
+          <SummaryCard
+            title="Unmatched ERP"
+            count={results.unmatched_erp.length}
+            color="text-red-600"
+          />
         </div>
 
         {/* Matches Table */}
-        <div className="mt-6 bg-white shadow rounded-xl p-4 overflow-x-auto">
-          <h2 className="font-semibold text-lg mb-2">
-            Matches ({results.matches.length})
-          </h2>
-          {results.matches.length === 0 ? (
-            <p className="text-gray-500">No matches found</p>
-          ) : (
+        <DataSection
+          title={`Matches (${results.matches.length})`}
+          emptyMessage="No matches found"
+        >
+          {results.matches.length > 0 && (
             <table className="w-full border-collapse">
               <thead className="bg-brand-light text-white">
                 <tr>
@@ -88,7 +104,7 @@ export default function Reconciliation() {
               </thead>
               <tbody>
                 {results.matches.map((m, idx) => (
-                  <tr key={idx} className="border-b">
+                  <tr key={idx} className="border-b hover:bg-gray-50">
                     <td className="px-3 py-2">{m.bank?.date}</td>
                     <td className="px-3 py-2">{m.bank?.amount}</td>
                     <td className="px-3 py-2">{m.erp?.date}</td>
@@ -98,44 +114,59 @@ export default function Reconciliation() {
               </tbody>
             </table>
           )}
-        </div>
+        </DataSection>
 
         {/* Unmatched Bank */}
-        <div className="mt-6 bg-white shadow rounded-xl p-4">
-          <h2 className="font-semibold text-lg mb-2">
-            Unmatched Bank ({results.unmatched_bank.length})
-          </h2>
-          {results.unmatched_bank.length === 0 ? (
-            <p className="text-gray-500">All bank records matched</p>
-          ) : (
-            <ul className="list-disc pl-5">
-              {results.unmatched_bank.map((t, idx) => (
-                <li key={idx}>
-                  {t.date} — {t.amount}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <DataSection
+          title={`Unmatched Bank (${results.unmatched_bank.length})`}
+          emptyMessage="All bank records matched"
+        >
+          <ul className="list-disc pl-5 space-y-1">
+            {results.unmatched_bank.map((t, idx) => (
+              <li key={idx}>
+                {t.date} — <span className="font-semibold">{t.amount}</span>
+              </li>
+            ))}
+          </ul>
+        </DataSection>
 
         {/* Unmatched ERP */}
-        <div className="mt-6 bg-white shadow rounded-xl p-4">
-          <h2 className="font-semibold text-lg mb-2">
-            Unmatched ERP ({results.unmatched_erp.length})
-          </h2>
-          {results.unmatched_erp.length === 0 ? (
-            <p className="text-gray-500">All ERP records matched</p>
-          ) : (
-            <ul className="list-disc pl-5">
-              {results.unmatched_erp.map((t, idx) => (
-                <li key={idx}>
-                  {t.date} — {t.amount}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <DataSection
+          title={`Unmatched ERP (${results.unmatched_erp.length})`}
+          emptyMessage="All ERP records matched"
+        >
+          <ul className="list-disc pl-5 space-y-1">
+            {results.unmatched_erp.map((t, idx) => (
+              <li key={idx}>
+                {t.date} — <span className="font-semibold">{t.amount}</span>
+              </li>
+            ))}
+          </ul>
+        </DataSection>
       </div>
     </DashboardLayout>
+  );
+}
+
+/* --- Reusable Components --- */
+function SummaryCard({ title, count, color }) {
+  return (
+    <div className="bg-white shadow rounded-xl p-4 text-center">
+      <h3 className="text-lg font-semibold">{title}</h3>
+      <p className={`text-2xl font-bold ${color}`}>{count}</p>
+    </div>
+  );
+}
+
+function DataSection({ title, emptyMessage, children }) {
+  return (
+    <div className="bg-white shadow rounded-xl p-4">
+      <h2 className="font-semibold text-lg mb-2">{title}</h2>
+      {children && children.length > 0 ? (
+        children
+      ) : (
+        <p className="text-gray-500">{emptyMessage}</p>
+      )}
+    </div>
   );
 }
