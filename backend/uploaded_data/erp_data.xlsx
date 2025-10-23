@@ -1,0 +1,51 @@
+Date,EntryID,Account,Description,Debit,Credit,Partner,InvoiceRef,Journal
+2025-06-25,ERP2047,5000-CostOfGoods,Refund to Customer,2688.25,0.0,Epsilon LLC,INV-13260,Bank Journal
+2025-06-25,ERP2002,3000-Equity,Office Supplies,1943.79,0.0,Epsilon LLC,INV-76674,Purchase Journal
+2025-06-27,ERP2011,6000-Expenses,Refund to Customer,3823.29,0.0,Internal,INV-65265,General Journal
+2025-07-01,ERP2000,2000-AccountsPayable,Tax Adjustment,415.34,0.0,Epsilon LLC,INV-64964,Bank Journal
+2025-07-08,ERP2028,4000-Sales,Refund to Customer,0.0,990.7,Delta Corp,INV-84554,Purchase Journal
+2025-07-09,ERP2031,1000-Cash,Salary Expense,0.0,352.54,Epsilon LLC,INV-79121,Sales Journal
+2025-07-09,ERP2008,3000-Equity,Bank Charges,806.24,0.0,Beta Co,INV-39296,Sales Journal
+2025-07-11,ERP2023,1000-Cash,Bank Charges,0.0,4272.17,Gamma Traders,INV-49959,Bank Journal
+2025-07-15,ERP2009,2100-Bank,Tax Adjustment,0.0,3805.46,Delta Corp,INV-81106,Bank Journal
+2025-07-16,ERP2040,1000-Cash,Intercompany Transfer,3281.92,0.0,Beta Co,INV-11082,Bank Journal
+2025-07-16,ERP2005,1000-Cash,Refund to Customer,2031.5,0.0,Acme Ltd,INV-22055,Purchase Journal
+2025-07-17,ERP2049,2100-Bank,Intercompany Transfer,3338.57,0.0,Acme Ltd,INV-79876,Purchase Journal
+2025-07-20,ERP2037,2100-Bank,Bank Charges,2290.69,0.0,Gamma Traders,INV-85876,General Journal
+2025-07-22,ERP2012,2000-AccountsPayable,Supplier Invoice,0.0,102.86,Delta Corp,INV-79525,Purchase Journal
+2025-07-24,ERP2013,3000-Equity,Invoice Payment,0.0,4646.69,Delta Corp,INV-33038,Sales Journal
+2025-07-24,ERP2015,1000-Cash,Invoice Payment,0.0,1268.72,Acme Ltd,INV-27283,Bank Journal
+2025-07-26,ERP2044,1000-Cash,Tax Adjustment,0.0,1947.48,Gamma Traders,INV-28946,Purchase Journal
+2025-07-27,ERP2043,2000-AccountsPayable,Supplier Invoice,0.0,3963.98,Beta Co,INV-28791,Bank Journal
+2025-08-02,ERP2004,2100-Bank,Supplier Invoice,2900.74,0.0,Beta Co,INV-88907,Sales Journal
+2025-08-12,ERP2021,4000-Sales,Supplier Invoice,2493.19,0.0,Gamma Traders,INV-96798,Bank Journal
+2025-08-13,ERP2026,2000-AccountsPayable,Refund to Customer,0.0,4264.09,Beta Co,INV-53398,Purchase Journal
+2025-08-19,ERP2048,2000-AccountsPayable,Salary Expense,0.0,3349.51,Delta Corp,INV-13589,Purchase Journal
+2025-08-20,ERP2027,2000-AccountsPayable,Salary Expense,0.0,727.87,Internal,INV-13612,General Journal
+2025-08-21,ERP2046,2000-AccountsPayable,Salary Expense,0.0,1712.93,Delta Corp,INV-33971,Sales Journal
+2025-08-23,ERP2010,2100-Bank,Supplier Invoice,2226.26,0.0,Acme Ltd,INV-50714,General Journal
+2025-08-25,ERP2024,2000-AccountsPayable,Salary Expense,1244.33,0.0,Delta Corp,INV-29154,General Journal
+2025-09-02,ERP2017,6000-Expenses,Bank Charges,4427.73,0.0,Delta Corp,INV-93827,Purchase Journal
+2025-09-04,ERP2007,5000-CostOfGoods,Bank Charges,382.2,0.0,Beta Co,INV-42434,Purchase Journal
+2025-09-04,ERP2019,5000-CostOfGoods,Office Supplies,1734.79,0.0,Acme Ltd,INV-69944,Bank Journal
+2025-09-07,ERP2032,2100-Bank,Sales Invoice,4248.73,0.0,Gamma Traders,INV-77984,Purchase Journal
+2025-09-08,ERP2030,5000-CostOfGoods,Refund to Customer,3152.38,0.0,Acme Ltd,INV-78385,Sales Journal
+2025-09-10,ERP2014,3000-Equity,Tax Adjustment,0.0,1701.09,Delta Corp,INV-51506,Purchase Journal
+2025-09-13,ERP2006,3000-Equity,Salary Expense,3851.07,0.0,Internal,INV-23739,Purchase Journal
+2025-09-15,ERP2041,1000-Cash,Bank Charges,0.0,3704.46,Delta Corp,INV-28197,Bank Journal
+2025-09-16,ERP2018,4000-Sales,Depreciation,1864.58,0.0,Acme Ltd,INV-14168,Sales Journal
+2025-09-17,ERP2038,6000-Expenses,Office Supplies,0.0,2561.19,Delta Corp,INV-56349,Bank Journal
+2025-09-18,ERP2016,2000-AccountsPayable,Supplier Invoice,1727.26,0.0,Epsilon LLC,INV-53666,General Journal
+2025-09-23,ERP2029,2100-Bank,Office Supplies,836.54,0.0,Delta Corp,INV-59779,Bank Journal
+2025-09-24,ERP2033,3000-Equity,Invoice Payment,0.0,2878.26,Internal,INV-26807,Bank Journal
+2025-09-25,ERP2042,4000-Sales,Depreciation,0.0,3406.93,Delta Corp,INV-78402,Purchase Journal
+2025-09-27,ERP2035,2100-Bank,Bank Charges,2775.31,0.0,Gamma Traders,INV-79379,Sales Journal
+2025-10-01,ERP2036,2100-Bank,Salary Expense,4749.94,0.0,Gamma Traders,INV-17360,Purchase Journal
+2025-10-08,ERP2045,2000-AccountsPayable,Refund to Customer,4160.55,0.0,Acme Ltd,INV-44907,Bank Journal
+2025-10-11,ERP2034,2100-Bank,Depreciation,2441.31,0.0,Internal,INV-70641,General Journal
+2025-10-12,ERP2001,1000-Cash,Sales Invoice,2143.16,0.0,Acme Ltd,INV-86935,Bank Journal
+2025-10-12,ERP2025,2100-Bank,Tax Adjustment,1925.24,0.0,Beta Co,INV-42229,Sales Journal
+2025-10-14,ERP2022,6000-Expenses,Invoice Payment,0.0,2651.4,Gamma Traders,INV-23848,Sales Journal
+2025-10-18,ERP2020,2000-AccountsPayable,Intercompany Transfer,3841.28,0.0,Gamma Traders,INV-45381,General Journal
+2025-10-18,ERP2003,2100-Bank,Refund to Customer,1436.7,0.0,Acme Ltd,INV-41402,General Journal
+2025-10-23,ERP2039,6000-Expenses,Sales Invoice,713.97,0.0,Epsilon LLC,INV-78703,General Journal

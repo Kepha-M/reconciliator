@@ -1,26 +1,40 @@
-from pydantic import BaseModel
+# app/schemas.py
 from typing import List, Optional
-from datetime import date
+from pydantic import BaseModel
+from datetime import date, datetime
 
+
+# =========================================================
+# Transaction Schemas
+# =========================================================
 class TransactionBase(BaseModel):
-    transaction_id: Optional[str]
-    date: Optional[date]
+    id: Optional[int]
+    reference: Optional[str]
     description: Optional[str]
-    debit: Optional[float]
-    credit: Optional[float]
     amount: Optional[float]
+    date: Optional[date]
 
-    model_config = {
-        "from_attributes": True,  # required for from_orm in Pydantic v2
-    }
+    class Config:
+        orm_mode = True
+        json_encoders = {date: lambda v: v.isoformat() if v else None}
 
-# Nested match schema for reconciliation
-class TransactionMatch(BaseModel):
-    bank: TransactionBase
-    erp: TransactionBase
 
-# Response model for reconciliation results
+# =========================================================
+# Reconciliation Schemas
+# =========================================================
+class ReconciliationRecord(BaseModel):
+    id: Optional[int]
+    bank_reference: Optional[str]
+    erp_reference: Optional[str]
+    amount: Optional[float]
+    date: Optional[date]
+
+    class Config:
+        orm_mode = True
+        json_encoders = {date: lambda v: v.isoformat() if v else None}
+
+
 class ReconciliationResponse(BaseModel):
-    matches: List[TransactionMatch]
-    unmatched_bank: List[TransactionBase]
-    unmatched_erp: List[TransactionBase]
+    matched: List[ReconciliationRecord]
+    unmatched_bank: List[ReconciliationRecord]
+    unmatched_erp: List[ReconciliationRecord]

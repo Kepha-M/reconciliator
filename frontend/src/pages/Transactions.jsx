@@ -36,10 +36,21 @@ export default function Transactions() {
     try {
       setUploading(true);
       const res = await uploadFiles(bankFile, erpFile);
+
       toast.success(
-        `Uploaded successfully (Bank: ${res.bank_rows} rows, ERP: ${res.erp_rows} rows)`
+        res.message ||
+          `Uploaded successfully (Bank: ${res.bank_rows || 0} rows, ERP: ${res.erp_rows || 0} rows)`
       );
 
+      // ✅ Handle redirect if backend includes redirect_url
+      if (res.redirect_url) {
+        setTimeout(() => {
+          window.location.href = res.redirect_url;
+        }, 1500); // Delay for UX smoothness
+        return;
+      }
+
+      // Otherwise, update frontend state
       setBankTransactions(res.bank_data || []);
       setErpTransactions(res.erp_data || []);
     } catch (error) {
@@ -74,6 +85,14 @@ export default function Transactions() {
       setMatched(res.matched || []);
       setUnmatchedBank(res.unmatched_bank || []);
       setUnmatchedERP(res.unmatched_erp || []);
+
+      // ✅ Handle redirect if backend includes redirect_url
+      if (res.redirect_url) {
+        setTimeout(() => {
+          window.location.href = res.redirect_url;
+        }, 1500);
+        return;
+      }
     } catch (err) {
       console.error("Reconciliation failed:", err);
       toast.error("Reconciliation failed!");
@@ -183,7 +202,9 @@ export default function Transactions() {
           />
         )}
 
-        {(matched.length > 0 || unmatchedBank.length > 0 || unmatchedERP.length > 0) && (
+        {(matched.length > 0 ||
+          unmatchedBank.length > 0 ||
+          unmatchedERP.length > 0) && (
           <div className="space-y-6">
             {matched.length > 0 && (
               <AccordionTable
@@ -234,7 +255,11 @@ function AccordionTable({ title, icon, columns, data, type, onDelete }) {
           {icon}
           {title} <span className="text-gray-500 text-sm">({data.length})</span>
         </h2>
-        {open ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
+        {open ? (
+          <ChevronUp className="w-5 h-5 text-gray-500" />
+        ) : (
+          <ChevronDown className="w-5 h-5 text-gray-500" />
+        )}
       </button>
 
       {/* Accordion Content */}
@@ -244,7 +269,10 @@ function AccordionTable({ title, icon, columns, data, type, onDelete }) {
             <thead className="bg-blue-600 text-white">
               <tr>
                 {columns.map((col) => (
-                  <th key={col} className="px-4 py-2 text-left font-medium uppercase tracking-wide">
+                  <th
+                    key={col}
+                    className="px-4 py-2 text-left font-medium uppercase tracking-wide"
+                  >
                     {col}
                   </th>
                 ))}
@@ -263,7 +291,10 @@ function AccordionTable({ title, icon, columns, data, type, onDelete }) {
                 </tr>
               ) : (
                 data.map((t, idx) => (
-                  <tr key={idx} className="border-b hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={idx}
+                    className="border-b hover:bg-gray-50 transition-colors"
+                  >
                     {columns.map((col) => (
                       <td key={col} className="px-4 py-2">
                         {t[col] ?? t[col.toLowerCase()] ?? ""}

@@ -1,160 +1,168 @@
 # app/routes/reconciliation.py
-from fastapi import APIRouter, Depends, HTTPException, Body 
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.models import ReconciliationResult,ResultType
-from app.schemas import TransactionBase, ReconciliationResponse
-
-router = APIRouter()
+from app.models import ReconciliationResult, ResultType
+from app.schemas import ReconciliationResponse
+from datetime import datetime
 import pandas as pd
-from datetime import date
+import os
+import logging
 
-def serialize_transaction(tx: TransactionBase) -> dict:
-    """Convert Pydantic TransactionBase to dict and serialize date."""
-    d = tx.dict()
-    if isinstance(d.get("date"), date):
-        d["date"] = d["date"].isoformat()
-    return d
+# Initialize router
+router = APIRouter()
+
+# Logger
+logger = logging.getLogger(__name__)
+
+# Directory where uploaded files are temporarily stored
+UPLOAD_DIR = "uploaded_data"
+BANK_FILE_PATH = os.path.join(UPLOAD_DIR, "bank_data.xlsx")
+ERP_FILE_PATH = os.path.join(UPLOAD_DIR, "erp_data.xlsx")
 
 
-#     # Fetch all transactions
-#     bank_transactions = db.query(BankTransaction).all()
-#     erp_transactions = db.query(ERPTransaction).all()
+@router.post("/reconciliation", response_model=ReconciliationResponse)
+def run_reconciliation(db: Session = Depends(get_db)):
+    """
+    Perform reconciliation between uploaded bank and ERP data files.
+    Matching is based on Amount + Date.
+    Results are saved in the database and returned to the frontend.
+    """
+    try:
+        # --- Validate existence of uploaded files ---
+        if not os.path.exists(BANK_FILE_PATH) or not os.path.exists(ERP_FILE_PATH):
+            raise HTTPException(
+                status_code=400,
+                detail="Missing uploaded files. Please upload both bank and ERP data before reconciliation."
+            )
 
-#     # Convert ORM objects to Pydantic dicts
-#     unmatched_bank = [serialize_transaction(TransactionBase.from_orm(b)) for b in bank_transactions]
-#     unmatched_erp = [serialize_transaction(TransactionBase.from_orm(e)) for e in erp_transactions]
-#     matches = []
+        # --- Load DataFrames ---
+        bank_df = pd.read_excel(BANK_FILE_PATH)
+        erp_df = pd.read_excel(ERP_FILE_PATH)
 
-#     # Reconciliation logic
-#     for b in bank_transactions:
-#         for e in erp_transactions:
-#             if b.amount == e.amount and b.date == e.date:
-#                 bank_dict = serialize_transaction(TransactionBase.from_orm(b))
-#                 erp_dict = serialize_transaction(TransactionBase.from_orm(e))
-#                 matches.append({"bank": bank_dict, "erp": erp_dict})
+        # --- Normalize column names for consistency ---
+        bank_df.columns = bank_df.columns.str.strip().str.lower()
+        erp_df.columns = erp_df.columns.str.strip().str.lower()
 
-#                 # Remove matched items from unmatched lists
-#                 unmatched_bank = [
-#                     t for t in unmatched_bank
-#                     if not (t["transaction_id"] == b.transaction_id and t["date"] == str(b.date))
-#                 ]
-#                 unmatched_erp = [
-#                     t for t in unmatched_erp
-#                     if not (t["transaction_id"] == e.transaction_id and t["date"] == str(e.date))
-#                 ]
-#                 break  # stop after first match for this bank transaction
+        # --- Validate required columns ---
+        required_cols = ["amount", "date"]
+        for col in required_cols:
+            if col not in bank_df.columns or col not in erp_df.columns:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Both files must contain '{col}' column."
+                )
 
-#     # Build results dictionary
-#     results = {
-#         "matches": matches,
-#         "unmatched_bank": unmatched_bank,
-#         "unmatched_erp": unmatched_erp
-#     }
-
-#     # Save to database
-#     rec = ReconciliationResult(results=results)
-#     db.add(rec)
-#     db.commit()
-#     db.refresh(rec)
-
-#     return results
-@router.post("/reconciliation")
-def run_reconciliation(
-    payload: dict = Body(...),  # Accept raw JSON from frontend
-    db: Session = Depends(get_db)
-):
-    # Convert JSON arrays to DataFrames
-    bank_data = pd.DataFrame(payload.get("bank_data", []))
-    erp_data = pd.DataFrame(payload.get("erp_data", []))
-
-    # Convert date strings to actual date objects
-    for df in [bank_data, erp_data]:
-        if "Date" in df.columns:
-            df["Date"] = pd.to_datetime(df["Date"], errors="coerce").dt.date
-        elif "date" in df.columns:
+        # --- Convert dates ---
+        for df in [bank_df, erp_df]:
             df["date"] = pd.to_datetime(df["date"], errors="coerce").dt.date
 
-    # Basic matching: Amount + Date
-    matched = pd.merge(
-        bank_data, erp_data,
-        left_on=["Amount", "Date"],
-        right_on=["Amount", "Date"],
-        how="inner",
-        suffixes=("_bank", "_erp")
-    )
-    unmatched_bank = bank_data[~bank_data.index.isin(matched.index)]
-    unmatched_erp = erp_data[~erp_data.index.isin(matched.index)]
+        # --- Perform Matching (Amount + Date) ---
+        matched = pd.merge(
+            bank_df, erp_df,
+            on=["amount", "date"],
+            how="inner",
+            suffixes=("_bank", "_erp")
+        )
 
-    # Store results in DB
-    for _, row in matched.iterrows():
-        db.add(ReconciliationResult(
-            result_type=ResultType.matched,
-            bank_reference=row.get("TransactionID") or row.get("transaction_id"),
-            erp_reference=row.get("VoucherNo") or row.get("voucherNo"),
-            amount=row["Amount"],
-            date=row["Date"]
-        ))
-    for _, row in unmatched_bank.iterrows():
-        db.add(ReconciliationResult(
-            result_type=ResultType.unmatched_bank,
-            bank_reference=row.get("TransactionID") or row.get("transaction_id"),
-            amount=row["Amount"],
-            date=row["Date"]
-        ))
-    for _, row in unmatched_erp.iterrows():
-        db.add(ReconciliationResult(
-            result_type=ResultType.unmatched_erp,
-            erp_reference=row.get("VoucherNo") or row.get("voucherNo"),
-            amount=row["Amount"],
-            date=row["Date"]
-        )) 
+        # --- Identify unmatched records ---
+        unmatched_bank = bank_df.merge(matched, on=["amount", "date"], how="left", indicator=True)
+        unmatched_bank = unmatched_bank[unmatched_bank["_merge"] == "left_only"].drop(columns=["_merge"])
 
-    db.commit()
+        unmatched_erp = erp_df.merge(matched, on=["amount", "date"], how="left", indicator=True)
+        unmatched_erp = unmatched_erp[unmatched_erp["_merge"] == "left_only"].drop(columns=["_merge"])
 
-    # Return results to frontend
-    return {
-        "matched": matched.to_dict(orient="records"),
-        "unmatched_bank": unmatched_bank.to_dict(orient="records"),
-        "unmatched_erp": unmatched_erp.to_dict(orient="records")
-    }
+        # --- Clear previous reconciliation results ---
+        db.query(ReconciliationResult).delete()
 
-# @router.get("/reconciliation-results")
-# def get_results(db: Session = Depends(get_db)):
-#     results = db.query(ReconciliationResult).all()
-#     return [dict(
-#         id=r.id,
-#         result_type=r.result_type.value,
-#         bank_reference=r.bank_reference,
-#         erp_reference=r.erp_reference,
-#         amount=r.amount,
-#         date=r.date
-#     ) for r in results]
+        # --- Insert Matched Records ---
+        for _, row in matched.iterrows():
+            db.add(ReconciliationResult(
+                result_type=ResultType.matched,
+                bank_reference=row.get("transactionid") or row.get("transaction_id"),
+                erp_reference=row.get("voucherno") or row.get("voucher_no"),
+                amount=row["amount"],
+                date=row["date"]
+            ))
+
+        # --- Insert Unmatched Bank Records ---
+        for _, row in unmatched_bank.iterrows():
+            db.add(ReconciliationResult(
+                result_type=ResultType.unmatched_bank,
+                bank_reference=row.get("transactionid") or row.get("transaction_id"),
+                amount=row["amount"],
+                date=row["date"]
+            ))
+
+        # --- Insert Unmatched ERP Records ---
+        for _, row in unmatched_erp.iterrows():
+            db.add(ReconciliationResult(
+                result_type=ResultType.unmatched_erp,
+                erp_reference=row.get("voucherno") or row.get("voucher_no"),
+                amount=row["amount"],
+                date=row["date"]
+            ))
+
+        # --- Commit results to DB ---
+        db.commit()
+        logger.info("Reconciliation results successfully saved to the database.")
+
+        # --- Return structured response ---
+        return ReconciliationResponse(
+            matched=matched.to_dict(orient="records"),
+            unmatched_bank=unmatched_bank.to_dict(orient="records"),
+            unmatched_erp=unmatched_erp.to_dict(orient="records")
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Reconciliation error: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Reconciliation failed: {str(e)}")
+
 
 @router.get("/reconciliation-results")
-def get_results(db: Session = Depends(get_db)):
-    results = db.query(ReconciliationResult).all()
+def get_reconciliation_results(db: Session = Depends(get_db)):
+    """
+    Retrieve all reconciliation results (matched, unmatched_bank, unmatched_erp)
+    from the database.
+    """
+    try:
+        results = db.query(ReconciliationResult).all()
 
-    response = {
-        "matches": [],
-        "unmatched_bank": [],
-        "unmatched_erp": [],
-    }
+        if not results:
+            return {
+                "message": "No reconciliation data found. Run a reconciliation first.",
+                "matches": [],
+                "unmatched_bank": [],
+                "unmatched_erp": [],
+            }
 
-    for r in results:
-        item = {
-            "id": r.id,
-            "bank_reference": r.bank_reference,
-            "erp_reference": r.erp_reference,
-            "amount": r.amount,
-            "date": r.date,
+        response = {
+            "matches": [],
+            "unmatched_bank": [],
+            "unmatched_erp": [],
         }
 
-        if r.result_type.value == "matched":
-            response["matches"].append(item)
-        elif r.result_type.value == "unmatched_bank":
-            response["unmatched_bank"].append(item)
-        elif r.result_type.value == "unmatched_erp":
-            response["unmatched_erp"].append(item)
+        for r in results:
+            record = {
+                "id": r.id,
+                "bank_reference": r.bank_reference,
+                "erp_reference": r.erp_reference,
+                "amount": r.amount,
+                "date": r.date.isoformat() if r.date else None,
+            }
 
-    return response
+            if r.result_type == ResultType.matched:
+                response["matches"].append(record)
+            elif r.result_type == ResultType.unmatched_bank:
+                response["unmatched_bank"].append(record)
+            elif r.result_type == ResultType.unmatched_erp:
+                response["unmatched_erp"].append(record)
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Error fetching reconciliation results: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve reconciliation results.")
