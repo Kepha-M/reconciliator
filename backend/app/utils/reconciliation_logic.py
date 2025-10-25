@@ -1,82 +1,71 @@
-# app/utils/reconciliation_logic.py
 import pandas as pd
-from app.models.models import ResultType
+from sqlalchemy.orm import Session
 
-def perform_reconciliation(bank_df: pd.DataFrame, erp_df: pd.DataFrame, db):
-    required_bank = {"Date", "TransactionID", "Debit", "Credit", "BankReference"}
-    required_erp = {"Date", "EntryID", "Debit", "Credit", "InvoiceRef"}
+def perform_reconciliation(bank_df: pd.DataFrame, db: Session):
+    """
+    Compare ERP (from DB) and Bank transaction records, and return reconciliation results.
+    """
 
-    if not required_bank.issubset(bank_df.columns):
-        raise ValueError(f"Bank file missing: {required_bank - set(bank_df.columns)}")
-    if not required_erp.issubset(erp_df.columns):
-        raise ValueError(f"ERP file missing: {required_erp - set(erp_df.columns)}")
+    # --- Step 1: Load ERP transactions from DB ---
+    query = """
+        SELECT transaction_id AS "TransactionID",
+               amount AS "Amount",
+               date AS "Date"
+        FROM erp_transactions
+    """
 
-    # Normalize and compute amount
-    bank_df["amount"] = bank_df["Debit"].fillna(0) - bank_df["Credit"].fillna(0)
-    erp_df["amount"] = erp_df["Debit"].fillna(0) - erp_df["Credit"].fillna(0)
+    # Use proper connection from session
+    with db.connection() as conn:
+        erp_df = pd.read_sql(query, conn)
 
-    # Convert date columns to proper datetime
+    # --- Step 2: Validate column existence ---
+    required_columns = ["TransactionID", "Amount", "Date"]
+
+    for col in required_columns:
+        if col not in bank_df.columns:
+            raise ValueError(f"Missing required column '{col}' in uploaded bank file.")
+        if col not in erp_df.columns:
+            raise ValueError(f"Missing required column '{col}' in ERP dataset.")
+
+    # --- Step 3: Normalize data ---
+    bank_df["TransactionID"] = bank_df["TransactionID"].astype(str).str.strip().str.upper()
+    erp_df["TransactionID"] = erp_df["TransactionID"].astype(str).str.strip().str.upper()
+
     bank_df["Date"] = pd.to_datetime(bank_df["Date"], errors="coerce")
     erp_df["Date"] = pd.to_datetime(erp_df["Date"], errors="coerce")
 
-    # First pass: Match by Reference + Amount
-    merged = pd.merge(
-        bank_df,
+    bank_df["Amount"] = pd.to_numeric(bank_df["Amount"], errors="coerce").round(2)
+    erp_df["Amount"] = pd.to_numeric(erp_df["Amount"], errors="coerce").round(2)
+
+    # --- Step 4: Compare datasets ---
+    comparison = pd.merge(
         erp_df,
+        bank_df,
+        on=required_columns,
         how="outer",
-        left_on=["BankReference", "amount"],
-        right_on=["InvoiceRef", "amount"],
-        suffixes=("_bank", "_erp"),
         indicator=True
     )
 
-    results = []
-
-    for _, row in merged.iterrows():
+    # --- Step 5: Assign reconciliation status ---
+    def classify(row):
         if row["_merge"] == "both":
-            results.append({
-                "result_type": ResultType.matched,
-                "bank_reference": row.get("BankReference"),
-                "erp_reference": row.get("InvoiceRef"),
-                "date": row.get("Date_bank") or row.get("Date_erp"),
-                "amount": row["amount"]
-            })
+            return "✅ Match"
         elif row["_merge"] == "left_only":
-            results.append({
-                "result_type": ResultType.unmatched_bank,
-                "bank_reference": row.get("BankReference"),
-                "erp_reference": None,
-                "date": row.get("Date_bank"),
-                "amount": row["amount"]
-            })
+            return "⚠️ Missing in Bank"
         elif row["_merge"] == "right_only":
-            results.append({
-                "result_type": ResultType.unmatched_erp,
-                "bank_reference": None,
-                "erp_reference": row.get("InvoiceRef"),
-                "date": row.get("Date_erp"),
-                "amount": row["amount"]
-            })
+            return "⚠️ Missing in ERP"
+        return "❌ Undefined"
 
-    # Second pass (optional): attempt date+amount match for remaining unmatched
-    unmatched_bank = bank_df[~bank_df["BankReference"].isin(merged["BankReference"].dropna())]
-    unmatched_erp = erp_df[~erp_df["InvoiceRef"].isin(merged["InvoiceRef"].dropna())]
+    comparison["Status"] = comparison.apply(classify, axis=1)
 
-    second_pass = pd.merge(
-        unmatched_bank,
-        unmatched_erp,
-        how="inner",
-        on=["Date", "amount"],
-        suffixes=("_bank", "_erp")
-    )
-
-    for _, row in second_pass.iterrows():
+    # --- Step 6: Structure results ---
+    results = []
+    for _, row in comparison.iterrows():
         results.append({
-            "result_type": ResultType.matched,
-            "bank_reference": row.get("BankReference"),
-            "erp_reference": row.get("InvoiceRef"),
-            "date": row.get("Date"),
-            "amount": row["amount"]
+            "TransactionID": row.get("TransactionID"),
+            "Amount": row.get("Amount"),
+            "Date": row["Date"].strftime("%Y-%m-%d") if pd.notnull(row["Date"]) else None,
+            "Status": row["Status"]
         })
 
     return results

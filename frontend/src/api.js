@@ -1,41 +1,27 @@
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 
-// -------------------- Upload both Bank + ERP files --------------------
-export async function uploadFiles(bankFile, erpFile) {
-  if (!bankFile || !erpFile) {
-    throw new Error("Both bank and ERP files must be provided.");
-  }
-
+// -------------------- Upload Bank Transactions File --------------------
+export const uploadBankFile = async (bankFile) => {
   const formData = new FormData();
   formData.append("bank_file", bankFile);
-  formData.append("erp_file", erpFile);
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/upload-files`, {
-      method: "POST",
-      body: formData,
-    });
+  const response = await fetch(`${API_BASE_URL}/reconcile-bank-file/`, {
+    method: "POST",
+    body: formData,
+  });
 
-    if (!response.ok) {
-      let errMsg = `Upload failed: ${response.status} ${response.statusText}`;
-      try {
-        const errorData = await response.json();
-        errMsg += ` - ${JSON.stringify(errorData)}`;
-      } catch {}
-      throw new Error(errMsg);
-    }
-
-    return await response.json();
-  } catch (err) {
-    console.error("Error uploading files:", err);
-    throw err;
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Upload failed: ${response.status} - ${error}`);
   }
-}
 
-// -------------------- Fetch bank transactions --------------------
+  return response.json();
+};
+
+// -------------------- Fetch Bank Transactions --------------------
 export async function getBankTransactions() {
   try {
-    const response = await fetch(`${API_BASE_URL}/transactions-bank`, {
+    const response = await fetch(`${API_BASE_URL}/upload-files`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     });
@@ -51,7 +37,7 @@ export async function getBankTransactions() {
   }
 }
 
-// -------------------- Fetch ERP transactions --------------------
+// -------------------- Fetch ERP Transactions --------------------
 export async function getErpTransactions() {
   try {
     const response = await fetch(`${API_BASE_URL}/transactions-erp`, {
@@ -70,7 +56,7 @@ export async function getErpTransactions() {
   }
 }
 
-// -------------------- Fetch reconciliation history --------------------
+// -------------------- Fetch Reconciliation History --------------------
 export const getReconciliationHistory = async () => {
   try {
     const res = await fetch(`${API_BASE_URL}/reconciliation-results`, {
@@ -89,7 +75,7 @@ export const getReconciliationHistory = async () => {
   }
 };
 
-// -------------------- Run reconciliation --------------------
+// -------------------- Run Reconciliation --------------------
 export const runReconciliation = async (bankTransactions, erpTransactions) => {
   if (!Array.isArray(bankTransactions) || !Array.isArray(erpTransactions)) {
     throw new Error("Bank and ERP transactions must be arrays.");
