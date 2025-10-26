@@ -4,6 +4,7 @@ from .models import (
     ReconciliationResult,
     BankTransaction,
     ERPTransaction,
+    BankUpload,
 )
 
 __all__ = [
