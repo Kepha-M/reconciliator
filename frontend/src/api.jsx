@@ -5,22 +5,28 @@ const BASE_URL = "http://localhost:8000/api"; // Update if backend runs elsewher
  * Upload bank file and get parsed records (no reconciliation yet)
  * Backend route: POST /reconciliation/upload-bank-file
  */
-export async function uploadBankFile(file) {
+export const uploadBankFile = async (file) => {
   const formData = new FormData();
-  formData.append("bank_file", file);
+  formData.append("bank_file", file); // 👈 must match the parameter name in FastAPI
 
-  const response = await fetch(`${BASE_URL}/upload-bank-file`, {
-    method: "POST",
-    body: formData,
-  });
+  try {
+    const response = await fetch(`${BASE_URL}/upload-bank-file/`, {
+      method: "POST",
+      body: formData, // 👈 do NOT add headers manually for multipart/form-data
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`File upload failed: ${errorText}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Upload failed (${response.status} ${response.statusText}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Upload failed:", error);
+    throw error;
   }
-
-  return await response.json();
-}
+};
 
 
 export async function deleteBankRecord(recordId) {
@@ -46,7 +52,7 @@ export async function reconcileBankRecords(uploadId) {
 
   const response = await fetch(`${BASE_URL}/run/${uploadId}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json"},
   });
 
   if (!response.ok) {

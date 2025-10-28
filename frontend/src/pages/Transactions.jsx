@@ -34,38 +34,44 @@ const Transactions = () => {
     }
   };
 
-  // ✅ Handle record delete
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this record?")) return;
-    try {
-      await deleteBankRecord(id);
-      setTransactions((prev) => prev.filter((t) => t.id !== id));
-      toast.success("Record deleted.");
-    } catch (err) {
-      console.error("Delete failed:", err);
-      toast.error("Failed to delete record.");
-    }
-  };
 
-  // ✅ Handle reconciliation
-  const handleReconcile = async () => {
-    if (!uploadId) {
-      toast.error("Upload ID missing. Re-upload the file.");
-      return;
-    }
+  // ✅ Handle reconciliation process
+const handleReconcile = async () => {
+  if (!uploadId) {
+    toast.error("Upload ID missing. Please re-upload the bank file before reconciling.");
+    return;
+  }
 
-    setIsReconciling(true);
-    try {
-      const result = await reconcileBankRecords(uploadId);
-      toast.success(`Reconciliation completed. ${result.records_compared} records processed.`);
+  setIsReconciling(true);
+  try {
+    const result = await reconcileBankRecords(uploadId);
+
+    // Enhanced success notification
+    if (result.status === "success") {
+      toast.success(
+        `✅ Reconciliation completed — ${result.records_compared} records processed. 
+        Matched: ${result.matched}, Unmatched: ${result.unmatched}`
+      );
       console.log("Reconciliation Results:", result);
-    } catch (err) {
-      console.error("Reconciliation failed:", err);
-      toast.error("Reconciliation failed. Check server logs.");
-    } finally {
-      setIsReconciling(false);
+    } else {
+      toast.error("⚠️ Reconciliation did not complete successfully. Please verify data integrity.");
     }
-  };
+
+  } catch (err) {
+    console.error("Reconciliation failed:", err);
+
+    // Parse and display a more informative message if possible
+    const errorMessage =
+      err?.message?.includes("fetch") 
+        ? "Server not reachable. Ensure backend is running on port 8000."
+        : err?.message || "Reconciliation failed. Check server logs.";
+
+    toast.error(errorMessage);
+  } finally {
+    setIsReconciling(false);
+  }
+};
+
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-lg">
@@ -119,10 +125,9 @@ const Transactions = () => {
               <tr className="bg-gray-100 text-gray-700">
                 <th className="border px-4 py-2">#</th>
                 <th className="border px-4 py-2">Transaction ID</th>
-                <th className="border px-4 py-2">Description</th>
                 <th className="border px-4 py-2">Amount</th>
                 <th className="border px-4 py-2">Date</th>
-                <th className="border px-4 py-2">Actions</th>
+                <th className="border px-4 py-2">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -130,17 +135,9 @@ const Transactions = () => {
                 <tr key={txn.id} className="hover:bg-gray-50">
                   <td className="border px-4 py-2">{idx + 1}</td>
                   <td className="border px-4 py-2">{txn.TransactionID}</td>
-                  <td className="border px-4 py-2">{txn.Description}</td>
                   <td className="border px-4 py-2">{txn.Amount}</td>
                   <td className="border px-4 py-2">{txn.Date}</td>
-                  <td className="border px-4 py-2 text-center">
-                    <button
-                      onClick={() => handleDelete(txn.id)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
-                    >
-                      Delete
-                    </button>
-                  </td>
+                  <td className="border px-4 py-2">{txn.Status}</td>
                 </tr>
               ))}
             </tbody>
