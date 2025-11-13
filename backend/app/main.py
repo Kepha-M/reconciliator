@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import upload, reconciliation, transactions, reconciliation_routes
+from app.routes import upload, transactions, reconciliation_routes, reports_routes
 from app.database import Base, engine
 
 app = FastAPI(title="Reconciliator API")
@@ -30,7 +30,7 @@ Base.metadata.create_all(bind=engine)
 # Include routers
 # -------------------------
 app.include_router(upload.router, prefix="/api", tags=["Upload"])
-app.include_router(reconciliation.router, prefix="/api", tags=["Reconciliation"])
 app.include_router(transactions.router, prefix="/api", tags=["Transactions"])
 app.include_router(reconciliation_routes.router, prefix="/api", tags=["Reconciliation Routes"])
+app.include_router(reports_routes.router, prefix="/api", tags=["Reports"])
 

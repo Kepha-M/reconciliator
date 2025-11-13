@@ -29,24 +29,6 @@ export const uploadBankFile = async (file) => {
 };
 
 
-export async function deleteBankRecord(recordId) {
-  const response = await fetch(`${BASE_URL}/delete-bank-record/${recordId}`, {
-    method: "DELETE",
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Delete failed: ${errorText}`);
-  }
-
-  return await response.json();
-}
-
-/**
- * Submit all verified transactions for reconciliation
- * Backend route: POST /reconciliation/run
- */
-
 export async function reconcileBankRecords(uploadId) {
   if (!uploadId) throw new Error("uploadId is required for reconciliation.");
 

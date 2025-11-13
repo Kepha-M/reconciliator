@@ -32,7 +32,7 @@ The **Auto Reconciliation System** automates the process of reconciling internal
 
 | Layer | Technology |
 |-------|-------------|
-| **Backend** | FastAPI, MongoDB, JWT/OAuth2 |
+| **Backend** | FastAPI, Postgres, JWT/OAuth2 |
 | **Frontend** | React.js, Axios, Recharts / Chart.js |
 | **DevOps** | Docker, GitHub Actions, Git |
 | **Language** | Python, JavaScript (ES6+), HTML5, CSS3, Bootstrap |
@@ -44,7 +44,7 @@ The **Auto Reconciliation System** automates the process of reconciling internal
 - 🐍 **Python** — Backend logic and reconciliation processing  
 - ⚛️ **React.js** — Frontend interface and dashboards  
 - ⚙️ **FastAPI** — REST API development  
-- 🧱 **MongoDB** — Data storage and transaction logs  
+- 🧱 **Postgres** — Data storage and transaction logs  
 - 🌐 **Axios** — API communication between frontend & backend  
 
 ---

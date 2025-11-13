@@ -1,71 +1,87 @@
-import pandas as pd
 from sqlalchemy.orm import Session
+from datetime import datetime
+from app.models.models import BankRecord, MasterRecord, ReconciliationResult
 
-def perform_reconciliation(bank_df: pd.DataFrame, db: Session):
-    """
-    Compare ERP (from DB) and Bank transaction records, and return reconciliation results.
-    """
 
-    # --- Step 1: Load ERP transactions from DB ---
-    query = """
-        SELECT transaction_id AS "TransactionID",
-               amount AS "Amount",
-               date AS "Date"
-        FROM erp_transactions
+def reconcile_bank_records(db: Session, upload_id: str):
+    """
+    Performs automatic reconciliation between uploaded bank records and ERP (master) transactions.
+    Inserts results into reconciliation_results and returns a structured summary.
     """
 
-    # Use proper connection from session
-    with db.connection() as conn:
-        erp_df = pd.read_sql(query, conn)
+    # Fetch records
+    bank_records = db.query(BankRecord).filter(BankRecord.upload_id == upload_id).all()
+    master_records = db.query(MasterRecord).all()
 
-    # --- Step 2: Validate column existence ---
-    required_columns = ["TransactionID", "Amount", "Date"]
+    if not bank_records:
+        return {"message": f"No bank records found for upload_id {upload_id}."}
 
-    for col in required_columns:
-        if col not in bank_df.columns:
-            raise ValueError(f"Missing required column '{col}' in uploaded bank file.")
-        if col not in erp_df.columns:
-            raise ValueError(f"Missing required column '{col}' in ERP dataset.")
+    matched, unmatched_bank, unmatched_erp = [], [], []
 
-    # --- Step 3: Normalize data ---
-    bank_df["TransactionID"] = bank_df["TransactionID"].astype(str).str.strip().str.upper()
-    erp_df["TransactionID"] = erp_df["TransactionID"].astype(str).str.strip().str.upper()
+    # Matching logic: match based on amount and date
+    for bank in bank_records:
+        match = next(
+            (
+                erp
+                for erp in master_records
+                if abs(erp.amount - bank.amount) < 0.01 and erp.date == bank.date
+            ),
+            None,
+        )
 
-    bank_df["Date"] = pd.to_datetime(bank_df["Date"], errors="coerce")
-    erp_df["Date"] = pd.to_datetime(erp_df["Date"], errors="coerce")
+        if match:
+            # Insert reconciliation result
+            result = ReconciliationResult(
+                bank_record_id=bank.id,
+                matched_master_id=match.id,
+                match_score=1.0,  # full match
+                status="Matched",
+                reconciled_at=datetime.utcnow(),
+            )
+            db.add(result)
 
-    bank_df["Amount"] = pd.to_numeric(bank_df["Amount"], errors="coerce").round(2)
-    erp_df["Amount"] = pd.to_numeric(erp_df["Amount"], errors="coerce").round(2)
+            # Update bank record
+            bank.status = "Matched"
+            matched.append({
+                "bank_id": bank.id,
+                "bank_ref": bank.transaction_id,
+                "erp_ref": match.transaction_id,
+                "amount": bank.amount,
+                "date": str(bank.date)
+            })
+        else:
+            bank.status = "Unmatched"
+            unmatched_bank.append({
+                "transaction_id": bank.transaction_id,
+                "amount": bank.amount,
+                "date": str(bank.date)
+            })
+        db.add(bank)
 
-    # --- Step 4: Compare datasets ---
-    comparison = pd.merge(
-        erp_df,
-        bank_df,
-        on=required_columns,
-        how="outer",
-        indicator=True
-    )
+    # Identify ERP transactions with no corresponding bank match
+    unmatched_erp = [
+        {
+            "transaction_id": erp.transaction_id,
+            "amount": erp.amount,
+            "date": str(erp.date)
+        }
+        for erp in master_records
+        if not any(abs(erp.amount - b.amount) < 0.01 and erp.date == b.date for b in bank_records)
+    ]
 
-    # --- Step 5: Assign reconciliation status ---
-    def classify(row):
-        if row["_merge"] == "both":
-            return "✅ Match"
-        elif row["_merge"] == "left_only":
-            return "⚠️ Missing in Bank"
-        elif row["_merge"] == "right_only":
-            return "⚠️ Missing in ERP"
-        return "❌ Undefined"
+    # Commit all DB changes
+    db.commit()
 
-    comparison["Status"] = comparison.apply(classify, axis=1)
-
-    # --- Step 6: Structure results ---
-    results = []
-    for _, row in comparison.iterrows():
-        results.append({
-            "TransactionID": row.get("TransactionID"),
-            "Amount": row.get("Amount"),
-            "Date": row["Date"].strftime("%Y-%m-%d") if pd.notnull(row["Date"]) else None,
-            "Status": row["Status"]
-        })
-
-    return results
+    # Return structured summary for frontend display
+    return {
+        "summary": {
+            "matched": len(matched),
+            "unmatched_bank": len(unmatched_bank),
+            "unmatched_erp": len(unmatched_erp),
+        },
+        "details": {
+            "matched_records": matched,
+            "unmatched_bank_records": unmatched_bank,
+            "unmatched_erp_records": unmatched_erp,
+        },
+    }
