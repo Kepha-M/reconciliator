@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.auth.schemas import UserCreate, Token
 from app.auth.crud import get_user_by_email, create_user
-from app.auth.utils import verify_password, hash_password, create_access_token
+from app.auth.utils import verify_password, hash_password, create_access_token, get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -64,3 +64,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     token = create_access_token({"sub": user.email})
 
     return {"access_token": token, "token_type": "bearer"}
+
+@router.get("/me")
+def read_me(current_user: dict = Depends(get_current_user)):
+    return current_user

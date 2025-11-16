@@ -2,37 +2,48 @@ import React, { useState } from "react";
 import toast from "react-hot-toast";
 import { API_BASE } from "../api/config";
 import DashboardLayout from "../layouts/DashboardLayout";
-import {
-  uploadBankFile,
-  reconcileBankRecords,
-} from "../api";
-import {
-  Play,
-  FileSpreadsheet,
-  Table as TableIcon,
-  FileText,
-} from "lucide-react";
+import { uploadBankFile, reconcileBankRecords } from "../api";
+import { Play, FileSpreadsheet, Table as TableIcon, FileText } from "lucide-react";
+
+// ===========================
+// Reusable Metric Card
+// ===========================
+const MetricCard = ({ title, value, color = "text-gray-900" }) => (
+  <div className="flex-1 min-w-[200px] p-4 bg-white shadow rounded-lg border border-gray-200">
+    <h3 className="text-gray-600 text-sm font-medium">{title}</h3>
+    <p className={`text-2xl font-bold ${color}`}>{value}</p>
+  </div>
+);
 
 const Transactions = () => {
+  // ===========================
+  // State
+  // ===========================
   const [bankFile, setBankFile] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [uploadId, setUploadId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isReconciling, setIsReconciling] = useState(false);
+  const [reconType, setReconType] = useState("bank");
 
-  // ✅ Upload File
+  // ===========================
+  // Computed Metrics
+  // ===========================
+  const matchedCount = transactions.filter(t => t.Status === "Matched").length;
+  const unmatchedCount = transactions.filter(t => t.Status === "Unmatched").length;
+
+  // ===========================
+  // Handlers
+  // ===========================
   const handleUploadFile = async () => {
-    if (!bankFile) {
-      toast.error("Please select a bank file first.");
-      return;
-    }
-
+    if (!bankFile) return toast.error("Please select a file first.");
     setIsLoading(true);
+
     try {
-      const res = await uploadBankFile(bankFile);
+      const res = await uploadBankFile(bankFile, reconType);
       setTransactions(res.records || []);
       setUploadId(res.upload_id);
-      toast.success(`✅ File uploaded successfully. ${res.record_count} records loaded.`);
+      toast.success(`File uploaded — ${res.record_count} records loaded.`);
     } catch (err) {
       console.error("Upload failed:", err);
       toast.error("File upload failed. Please try again.");
@@ -41,54 +52,89 @@ const Transactions = () => {
     }
   };
 
-  // ✅ Run Reconciliation
   const handleReconcile = async () => {
-    if (!uploadId) {
-      toast.error("Upload ID missing. Please re-upload the bank file before reconciling.");
-      return;
-    }
-
+    if (!uploadId) return toast.error("Upload ID missing. Please upload a file first.");
     setIsReconciling(true);
-    try {
-      const result = await reconcileBankRecords(uploadId);
 
+    try {
+      const result = await reconcileBankRecords(uploadId, reconType);
       if (result.status === "success") {
         toast.success(
-          `✅ Reconciliation complete — ${result.records_compared} records processed.
-           Matched: ${result.matched}, Unmatched: ${result.unmatched}`
+          `Reconciliation complete — ${result.records_compared} processed. Matched: ${result.matched}, Unmatched: ${result.unmatched}`
         );
+        setTransactions(result.records || transactions);
       } else {
-        toast.error("⚠️ Reconciliation did not complete successfully.");
+        toast.error("Reconciliation did not complete successfully.");
       }
     } catch (err) {
       console.error("Reconciliation failed:", err);
       toast.error(
         err?.message?.includes("fetch")
-          ? "Server not reachable. Ensure backend is running on port 8000."
-          : err?.message || "Reconciliation failed. Check server logs."
+          ? "Server unreachable. Ensure backend is running."
+          : err?.message || "Reconciliation failed."
       );
     } finally {
       setIsReconciling(false);
     }
   };
 
-  // ✅ Export Handlers
- const handleExport = (format) => {
-  if (!uploadId) {
-    toast.error("Upload ID missing. Please re-run reconciliation.");
-    return;
-  }
+  const handleExport = async (format) => {
+    if (!uploadId) return toast.error("Upload ID missing. Please re-run reconciliation.");
 
-  const url = `${API_BASE}/export-${format}?upload_id=${uploadId}`;
-  window.open(url, "_blank");
-};
+    const url = `${API_BASE}/${reconType}/export?upload_id=${uploadId}&format=${format}`;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
 
+      if (res.status === 401) {
+        toast.error("Session expired. Redirecting to login...");
+        localStorage.removeItem("token");
+        return setTimeout(() => (window.location.href = "/login"), 1500);
+      }
+
+      if (!res.ok) return toast.error(`Export failed: ${res.statusText}`);
+
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      let ext = format === "excel" ? "xlsx" : format === "pdf" ? "pdf" : "csv";
+      link.href = downloadUrl;
+      link.download = `${reconType}_${uploadId}.${ext}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      console.error("Export failed:", err);
+      toast.error("Export failed. Check console for details.");
+    }
+  };
+
+  // ===========================
+  // JSX Render
+  // ===========================
   return (
     <DashboardLayout>
+      <h1 className="text-2xl font-bold text-brand">Reconciliations</h1>
+      <p className="mb-6">Welcome to the intelligent reconciliation engine.</p>
+
       <div className="p-6 bg-white rounded-lg shadow-lg">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800">
-          Bank Upload & Reconciliation
-        </h2>
+
+        {/* Reconciliation Type Selector */}
+        <div className="mb-6">
+          <label className="block font-semibold text-gray-700 mb-2">Reconciliation Type</label>
+          <select
+            value={reconType}
+            onChange={(e) => setReconType(e.target.value)}
+            className="border rounded p-2 w-full sm:w-64"
+          >
+            <option value="bank">Bank Reconciliation</option>
+            <option value="supplier">Supplier Reconciliation</option>
+            <option value="customer">Customer Reconciliation</option>
+            <option value="general">General Ledger Reconciliation</option>
+          </select>
+        </div>
 
         {/* Upload Section */}
         <div className="flex flex-col sm:flex-row items-center gap-4 mb-4">
@@ -102,59 +148,53 @@ const Transactions = () => {
             onClick={handleUploadFile}
             disabled={isLoading}
             className={`flex items-center gap-2 px-4 py-2 rounded text-white transition ${
-              isLoading
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-indigo-600 hover:bg-indigo-700"
+              isLoading ? "bg-gray-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
             }`}
           >
             {isLoading ? "Uploading..." : "Upload File"}
           </button>
         </div>
 
-        {/* Reconciliation & Export Buttons */}
+        {/* Summary Cards & Export */}
         {transactions.length > 0 && (
-          <div className="flex flex-wrap gap-3 mb-6">
-            <button
-              onClick={handleReconcile}
-              disabled={isReconciling}
-              className={`flex items-center gap-2 px-4 py-2 rounded text-white transition ${
-                isReconciling
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-green-600 hover:bg-green-700"
-              }`}
-            >
-              <Play size={18} />
-              {isReconciling ? "Reconciling..." : "Run Reconciliation"}
-            </button>
+          <div className="flex flex-col gap-4 mb-6">
+
+            {/* Summary Cards */}
+            <div className="flex flex-wrap gap-4 mb-4">
+              <MetricCard title="Total Transactions" value={transactions.length} />
+              <MetricCard title="Total Matched" value={matchedCount} color="text-green-600" />
+              <MetricCard title="Total Unmatched" value={unmatchedCount} color="text-red-600" />
+            </div>
 
             {/* Export Buttons */}
-            <button
-              onClick={() =>handleExport("csv")}
-              className="flex items-center gap-2 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <FileSpreadsheet size={18} /> Export CSV
-            </button>
+                <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  onClick={() => handleExport("csv")}
+                  className="flex items-center gap-1 px-2 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                >
+                  <FileSpreadsheet size={16} /> CSV
+                </button>
+                <button
+                  onClick={() => handleExport("excel")}
+                  className="flex items-center gap-1 px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
+                >
+                  <TableIcon size={16} /> Excel
+                </button>
+                <button
+                  onClick={() => handleExport("pdf")}
+                  className="flex items-center gap-1 px-2 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-sm"
+                >
+                  <FileText size={16} /> PDF
+                </button>
+              </div>
 
-            <button
-              onClick={()=>handleExport("excel")}
-              className="flex items-center gap-2 px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 text-white"
-            >
-              <TableIcon size={18} /> Export Excel
-            </button>
-
-            <button
-              onClick={()=>handleExport("pdf")}
-              className="flex items-center gap-2 px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white"
-            >
-              <FileText size={18} /> Export PDF
-            </button>
           </div>
         )}
 
         {/* Transactions Table */}
         {transactions.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="min-w-full border mt-4 text-sm">
+          <div className="overflow-x-auto mt-4">
+            <table className="min-w-full border text-sm">
               <thead>
                 <tr className="bg-gray-100 text-gray-700">
                   <th className="border px-4 py-2">#</th>
@@ -178,6 +218,7 @@ const Transactions = () => {
             </table>
           </div>
         )}
+
       </div>
     </DashboardLayout>
   );

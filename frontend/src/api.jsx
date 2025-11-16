@@ -1,46 +1,100 @@
 // src/api.jsx
-const BASE_URL = "http://localhost:8000/api"; // Update if backend runs elsewhere
+const BASE_URL = "http://localhost:8000/api";
 
+// =====================================================
+// Token Helper
+// =====================================================
+const getToken = () => localStorage.getItem("token");
+
+const authHeader = () => {
+  const token = getToken();
+  if (!token) throw new Error("User not authenticated. Token missing.");
+
+  return {
+    Authorization: `Bearer ${token}`,
+  };
+};
+
+// =====================================================
+// UPLOAD FILE (Dynamic Reconciliation Type)
+// =====================================================
 /**
- * Upload bank file and get parsed records (no reconciliation yet)
- * Backend route: POST /reconciliation/upload-bank-file
+ * Upload reconciliation file
+ * reconType = bank | supplier | customer | general
  */
-export const uploadBankFile = async (file) => {
+export const uploadBankFile = async (file, reconType = "bank") => {
+  if (!file) throw new Error("No file provided.");
+
   const formData = new FormData();
-  formData.append("bank_file", file); // 👈 must match the parameter name in FastAPI
+  formData.append("file", file); // 🔥 Standardized parameter name for all modules
 
   try {
-    const response = await fetch(`${BASE_URL}/upload-bank-file/`, {
+    const response = await fetch(`${BASE_URL}/${reconType}/upload-file/`, {
       method: "POST",
-      body: formData, // 👈 do NOT add headers manually for multipart/form-data
+      body: formData,
+      headers: {
+        ...authHeader(), // JWT only — do NOT set Content-Type for FormData
+      },
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Upload failed (${response.status} ${response.statusText}): ${errorText}`);
+      throw new Error(
+        `Upload failed (${response.status} ${response.statusText}): ${errorText}`
+      );
     }
 
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
     console.error("Upload failed:", error);
     throw error;
   }
 };
 
+// =====================================================
+// RUN RECONCILIATION
+// =====================================================
+/**
+ * Run reconciliation by type
+ * reconType = bank | supplier | customer | general
+ */
+export async function reconcileBankRecords(uploadId, reconType = "bank") {
+  if (!uploadId) throw new Error("uploadId is required.");
 
-export async function reconcileBankRecords(uploadId) {
-  if (!uploadId) throw new Error("uploadId is required for reconciliation.");
+  try {
+    const response = await fetch(
+      `${BASE_URL}/${reconType}/run/${uploadId}`,
+      {
+        method: "POST",
+        headers: {
+          ...authHeader(),
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-  const response = await fetch(`${BASE_URL}/run/${uploadId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json"},
-  });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Reconciliation failed: ${errorText}`);
+    }
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Reconciliation failed: ${errorText}`);
+    return await response.json();
+  } catch (error) {
+    console.error("Reconciliation error:", error);
+    throw error;
   }
-
-  return await response.json();
 }
+
+// =====================================================
+// EXPORT FILES
+// =====================================================
+/**
+ * Export results
+ * format = csv | excel | pdf
+ */
+export const exportReconciliation = (uploadId, format, reconType = "bank") => {
+  if (!uploadId) throw new Error("uploadId is required.");
+  if (!format) throw new Error("format is required.");
+
+  return `${BASE_URL}/${reconType}/export-${format}?upload_id=${uploadId}`;
+};
