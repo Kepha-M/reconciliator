@@ -15,4 +15,5 @@ export default defineConfig({
       // Add more aliases here as needed
     },
   },
+  base: '/reconciliator/', // Set base path for GitHub Pages deployment
 });
