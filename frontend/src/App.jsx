@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import AuthProvider from "./context/AuthContext";
 import Login from "./auth/Login";
 import Register from "./auth/Register";
@@ -12,15 +12,11 @@ function App() {
     <Router>
       <AuthProvider>
         <Routes>
-          {/* Default route */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-          {/* Public route */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-
-          {/* Private routes */}
           <Route
             path="/dashboard"
             element={
@@ -29,6 +25,7 @@ function App() {
               </PrivateRoute>
             }
           />
+
           <Route
             path="/transactions"
             element={
@@ -37,6 +34,7 @@ function App() {
               </PrivateRoute>
             }
           />
+
           <Route
             path="/audit-logs"
             element={
@@ -46,7 +44,6 @@ function App() {
             }
           />
 
-          {/* Fallback for unknown routes */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
