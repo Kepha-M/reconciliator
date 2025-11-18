@@ -35,7 +35,9 @@ jobs:
 
       # 5. Build Vite project
       - name: Build project
-        run: npx vite build
+        run: |
+            npx vite build
+            echo > dist/.nojekyll
 
       # 6. Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
