@@ -32,7 +32,7 @@ jobs:
       # 4. Install dependencies inside frontend/
       - name: Install dependencies
         working-directory: frontend
-        run: npm install
+        run: npm ci
 
       # 5. Build Vite project and disable Jekyll
       - name: Build project
