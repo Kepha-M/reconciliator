@@ -3,21 +3,24 @@ name: Deploy React + Vite to GitHub Pages
 on:
   push:
     branches:
-      - main
+      - main  # Change if your default branch is different
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      # 2. Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
+      # 3. Cache node_modules for faster builds
       - name: Cache Node modules
         uses: actions/cache@v3
         with:
@@ -26,10 +29,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
+      # 4. Install dependencies inside frontend/
       - name: Install dependencies
         working-directory: frontend
         run: npm install
 
+      # 5. Build Vite project and disable Jekyll
       - name: Build project
         working-directory: frontend
         run: |
@@ -37,6 +42,7 @@ jobs:
           npx vite build
           echo > dist/.nojekyll
 
+      # 6. Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
