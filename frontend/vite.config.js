@@ -11,5 +11,5 @@ export default defineConfig({
       '/context': path.resolve(__dirname, 'src/context')
     }
   },
-  base: '/reconciliator/' // Must match your repo name
+  base: '/reconciliator/' // MUST match repo name EXACTLY
 });
