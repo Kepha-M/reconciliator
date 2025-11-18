@@ -2,7 +2,7 @@
   "name": "frontend",
   "version": "0.0.0",
   "private": true,
-  "homepage": "https://kepha-m.github.io/reconciliator",
+  "homepage": "https://Kepha-M.github.io/reconciliator",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
