@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE } from "../api/config";
 
 export const AuthContext = createContext();
 
@@ -17,7 +18,7 @@ export const AuthContext = createContext();
       }
 
       try {
-        const { data } = await axios.get("http://localhost:8000/auth/me", {
+        const { data } = await axios.get(`${API_BASE}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser(data);
@@ -35,7 +36,7 @@ export const AuthContext = createContext();
   // Register user
   const registerUser = async (data) => {
     try {
-      const res = await axios.post("http://localhost:8000/auth/register", data);
+      const res = await axios.post(`${API_BASE}/auth/register`, data);
       return res.data;
     } catch (error) {
       console.error("Registration failed", error);
@@ -47,7 +48,7 @@ export const AuthContext = createContext();
   const loginUser = async (data) => {
     try {
       const res = await axios.post(
-        "http://localhost:8000/auth/login",
+        `${API_BASE}/auth/login`,
         new URLSearchParams({
           username: data.email,
           password: data.password,
@@ -59,7 +60,7 @@ export const AuthContext = createContext();
       localStorage.setItem("token", token);
 
       // Fetch user after login
-      const { data: userData } = await axios.get("http://localhost:8000/auth/me", {
+      const { data: userData } = await axios.get(`${API_BASE}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUser(userData);
