@@ -12,7 +12,7 @@ app = FastAPI(title="Reconciliator API")
 # Enable CORS (frontend origin)
 # -------------------------
 origins = [
-    "http://localhost:5173",  # your React frontend
+    "https://kepha-m.github.io/reconciliator/",  # your React frontend
     "http://127.0.0.1:5173",  
 ]
 
