@@ -1,5 +1,5 @@
 import { useState } from "react";
-
+import { API_BASE } from "../api/config";
 export default function Register() {
   const [form, setForm] = useState({
     username: "",
@@ -10,7 +10,7 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    await fetch("http://localhost:8000/auth/register", {
+    await fetch(`${API_BASE}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
