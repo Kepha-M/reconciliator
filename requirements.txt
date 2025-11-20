@@ -1,11 +1,29 @@
+# Web framework
 fastapi==0.111.1
 uvicorn[standard]==0.23.2
+
+# Environment & configuration
 python-dotenv==1.0.1
+
+# Data validation
 pydantic==2.7.1
+
+# Database
 sqlalchemy==2.0.22
-psycopg2-binary>=2.9.6
+psycopg2-binary==2.9.7
 alembic==1.11.1
+
+# Testing
 pytest==7.4.2
-cryptography>=40.0
-pandas==2.1.1
-numpy==1.27.5
+
+# Security
+cryptography==40.0.2
+
+# Data processing
+numpy==1.26.4
+pandas==2.0.3
+reportlab==4.0.0
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+argon2-cffi==21.3.0
