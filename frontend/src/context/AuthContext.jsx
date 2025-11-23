@@ -1,9 +1,9 @@
 import { createContext, useState, useEffect } from "react";
 import axios from "axios";
-
+import { API_BASE } from "../api/config";
 
 // Environment variable for backend URL
-const API_BASE = import.meta.env.VITE_API_BASE;
+// const API_BASE = import.meta.env.VITE_API_BASE;
 
 // Create context with default values to avoid null errors
 export const AuthContext = createContext({
