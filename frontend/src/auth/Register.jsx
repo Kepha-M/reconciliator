@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { API_BASE } from "../api/config";
 
 export default function Register() {
   const [form, setForm] = useState({
@@ -17,7 +16,7 @@ export default function Register() {
       body: JSON.stringify(form),
     });
 
-    window.location.href = "/login";
+   navigate("/login");
   };
 
   return (
