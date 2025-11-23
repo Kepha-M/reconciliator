@@ -1,5 +1,5 @@
 // src/api.jsx
-const BASE_URL = "https://reconciliator-k.onrender.com/api";
+import API_BASE from "./config/api";
 
 // =====================================================
 // Token Helper
@@ -29,7 +29,7 @@ export const uploadBankFile = async (file, reconType = "bank") => {
   formData.append("file", file); // 🔥 Standardized parameter name for all modules
 
   try {
-    const response = await fetch(`${BASE_URL}/${reconType}/upload-file/`, {
+    const response = await fetch(`${API_BASE}/${reconType}/upload-file/`, {
       method: "POST",
       body: formData,
       headers: {
@@ -63,7 +63,7 @@ export async function reconcileBankRecords(uploadId, reconType = "bank") {
 
   try {
     const response = await fetch(
-      `${BASE_URL}/${reconType}/run/${uploadId}`,
+      `${API_BASE}/${reconType}/run/${uploadId}`,
       {
         method: "POST",
         headers: {
@@ -96,5 +96,5 @@ export const exportReconciliation = (uploadId, format, reconType = "bank") => {
   if (!uploadId) throw new Error("uploadId is required.");
   if (!format) throw new Error("format is required.");
 
-  return `${BASE_URL}/${reconType}/export-${format}?upload_id=${uploadId}`;
+  return `${API_BASE}/${reconType}/export-${format}?upload_id=${uploadId}`;
 };

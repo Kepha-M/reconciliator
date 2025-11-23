@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect } from "react";
 import axios from "axios";
-import { API_BASE } from "../api/config";
+import API_BASE  from "../config/api"
 
 // Environment variable for backend URL
 // const API_BASE = import.meta.env.VITE_API_BASE;

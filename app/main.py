@@ -12,8 +12,8 @@ app = FastAPI(title="Reconciliator API")
 # Enable CORS (frontend origin)
 # -------------------------
 origins = [
-    "https://kepha-m.github.io", 
-    "https://kepha-m.github.io/reconciliator",  
+    "http://localhost:3001",          # Local frontend  
+    "https://kepha-m.github.io/reconciliator",  # Deployed frontend
 ]
 
 app.add_middleware(
@@ -41,6 +41,6 @@ def secure_data(user=Depends(get_current_user)):
 
 app.include_router(upload.router, prefix="/api", tags=["Upload"])
 app.include_router(transactions.router, prefix="/api", tags=["Transactions"])
-app.include_router(reconciliation_routes.router, prefix="/api", tags=["Reconciliation Routes"])
+app.include_router(reconciliation_routes.router, tags=["Reconciliation Routes"])
 app.include_router(reports_routes.router, prefix="/api", tags=["Reports"])
 

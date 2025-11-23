@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { API_BASE } from "../api/config";
+// import { API_BASE } from "../api/config";
 import { useNavigate } from "react-router-dom";
-
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 export default function Register() {
   const [form, setForm] = useState({
