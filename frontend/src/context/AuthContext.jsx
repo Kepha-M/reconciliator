@@ -1,14 +1,23 @@
 import { createContext, useState, useEffect } from "react";
 import axios from "axios";
-import { API_BASE } from "../api/config";
 
-export const AuthContext = createContext();
+// Environment variable for backend URL
+const API_BASE = import.meta.env.VITE_API_BASE;
 
- function AuthProvider({ children }) {
+// Create context with default values to avoid null errors
+export const AuthContext = createContext({
+  user: null,
+  loading: true,
+  registerUser: async () => {},
+  loginUser: async () => {},
+  logoutUser: () => {},
+});
+
+export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Load user on mount if token exists
+  // Load user if token exists
   useEffect(() => {
     const fetchUser = async () => {
       const token = localStorage.getItem("token");
@@ -34,24 +43,25 @@ export const AuthContext = createContext();
   }, []);
 
   // Register user
-  const registerUser = async (data) => {
+  const registerUser = async (formData) => {
     try {
-      const res = await axios.post(`${API_BASE}/auth/register`, data);
+      const res = await axios.post(`${API_BASE}/auth/register`, formData);
       return res.data;
     } catch (error) {
-      console.error("Registration failed", error);
+      console.error("Registration failed:", error.response?.data || error.message);
       throw error;
     }
   };
 
   // Login user
-  const loginUser = async (data) => {
+  const loginUser = async (formData) => {
     try {
+      // Adjust this according to your backend login expectation (form vs JSON)
       const res = await axios.post(
         `${API_BASE}/auth/login`,
         new URLSearchParams({
-          username: data.email,
-          password: data.password,
+          username: formData.email, // or formData.username if backend expects username
+          password: formData.password,
         }),
         { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
       );
@@ -64,8 +74,10 @@ export const AuthContext = createContext();
         headers: { Authorization: `Bearer ${token}` },
       });
       setUser(userData);
+
+      return userData;
     } catch (error) {
-      console.error("Login failed", error.response?.data || error.message);
+      console.error("Login failed:", error.response?.data || error.message);
       throw error;
     }
   };
@@ -84,5 +96,3 @@ export const AuthContext = createContext();
     </AuthContext.Provider>
   );
 }
-
-export default AuthProvider

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { API_BASE } from "../api/config";
+import { useNavigate } from "react-router-dom";
 
 export default function Register() {
   const [form, setForm] = useState({
@@ -6,6 +8,7 @@ export default function Register() {
     email: "",
     password: "",
   });
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
