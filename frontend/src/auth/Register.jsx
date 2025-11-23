@@ -1,15 +1,16 @@
 import { useState } from "react";
-import { API_BASE } from "../api/config";
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
 import { useNavigate } from "react-router-dom";
 
-const navigate = useNavigate();
+
 export default function Register() {
   const [form, setForm] = useState({
     username: "",
     email: "",
     password: "",
   });
-  const navigate = useNavigate();
+  
+const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
