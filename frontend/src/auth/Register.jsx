@@ -16,7 +16,7 @@ export default function Register() {
       body: JSON.stringify(form),
     });
 
-    window.location.href = "/login";
+   navigate("/login");
   };
 
   return (
