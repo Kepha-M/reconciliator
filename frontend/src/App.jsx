@@ -9,7 +9,6 @@ import PrivateRoute from "./auth/PrivateRoutes";
 
 function App() {
   return (
-    <AuthProvider>
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
@@ -45,7 +44,6 @@ function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </AuthProvider>
   );
 }
 
