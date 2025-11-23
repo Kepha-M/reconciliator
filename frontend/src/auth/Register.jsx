@@ -1,5 +1,5 @@
 import { useState } from "react";
-
+import { API_BASE } from "../api/config";
 export default function Register() {
   const [form, setForm] = useState({
     username: "",
