@@ -84,7 +84,14 @@ def upgrade() -> None:
     sa.Column('amount', sa.Float(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_reconciliation_results_id'), 'reconciliation_results', ['id'], unique=False)
+    op.execute(
+    "DO $$ BEGIN "
+    "IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+    "WHERE c.relname = 'ix_reconciliation_results_id') THEN "
+    "CREATE INDEX ix_reconciliation_results_id ON reconciliation_results (id); "
+    "END IF; "
+    "END $$;"
+)
     # ### end Alembic commands ###
 
 
